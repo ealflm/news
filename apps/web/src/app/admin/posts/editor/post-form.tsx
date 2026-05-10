@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 import { TiptapEditor } from './tiptap-editor';
 import { PublishControls } from './publish-controls';
+import { CoverImagePicker } from './cover-image-picker';
 import type { AdminPost } from '@news/shared';
 
 interface Props {
@@ -81,12 +82,10 @@ export function PostForm({ initial }: Props) {
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Ảnh cover (URL)</label>
-          <input
-            value={coverImageUrl ?? ''}
-            onChange={(e) => setCoverImageUrl(e.target.value)}
-            placeholder="https://..."
-            className="w-full rounded border px-3 py-2 text-sm"
+          <label className="mb-1 block text-sm font-medium">Ảnh cover</label>
+          <CoverImagePicker
+            value={coverImageUrl || null}
+            onChange={(u) => setCoverImageUrl(u ?? '')}
           />
         </div>
         <details>
