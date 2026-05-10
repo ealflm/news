@@ -10,6 +10,8 @@ const EnvSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
   PUBLIC_BASE_URL: z.string().url(),
+  UPLOADS_DIR: z.string().default('/home/ealflm/dev/news/uploads'),
+  PUBLIC_UPLOADS_PREFIX: z.string().default('/uploads'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
