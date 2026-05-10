@@ -12,9 +12,10 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "db:migrate": "pnpm --filter @news/db prisma migrate dev",
-    "db:generate": "pnpm --filter @news/db prisma generate",
+    "db:migrate": "pnpm --filter @news/db exec prisma migrate dev",
+    "db:generate": "pnpm --filter @news/db exec prisma generate",
     "db:seed": "pnpm --filter @news/db exec tsx prisma/seed.ts",
+    "db:setup": "node -e \"const{existsSync,copyFileSync}=require('fs');if(!existsSync('packages/db/.env')){copyFileSync('.env','packages/db/.env');console.log('Created packages/db/.env')}else{console.log('packages/db/.env already exists')}\"",
     "format": "prettier --write .",
     "prepare": "husky"
   },
