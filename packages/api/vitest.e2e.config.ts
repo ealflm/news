@@ -13,5 +13,10 @@ export default defineConfig({
     hookTimeout: 20000,
     environment: 'node',
     globals: true,
+    server: {
+      deps: {
+        inline: ['file-type'],
+      },
+    },
   },
 });
