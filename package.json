@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@9.12.0",
-  "engines": { "node": ">=20.11.0" },
+  "engines": {
+    "node": ">=20.11.0"
+  },
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
@@ -13,7 +15,16 @@
     "db:migrate": "pnpm --filter @news/db prisma migrate dev",
     "db:generate": "pnpm --filter @news/db prisma generate",
     "db:seed": "pnpm --filter @news/db exec tsx prisma/seed.ts",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
     "turbo": "^2.1.0",
