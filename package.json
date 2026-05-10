@@ -12,7 +12,7 @@
     "typecheck": "turbo run typecheck",
     "db:migrate": "pnpm --filter @news/db prisma migrate dev",
     "db:generate": "pnpm --filter @news/db prisma generate",
-    "db:seed": "pnpm --filter @news/db tsx prisma/seed.ts",
+    "db:seed": "pnpm --filter @news/db exec tsx prisma/seed.ts",
     "format": "prettier --write ."
   },
   "devDependencies": {
