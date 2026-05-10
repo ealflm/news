@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { listPublishedPosts } from '@/lib/posts';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 function postUrl(p: { publishedAt: string | null; slug: string }): Route {
   if (!p.publishedAt) return '/' as Route;

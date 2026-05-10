@@ -1,6 +1,6 @@
 import { listAllPublishedForSitemap } from '@/lib/posts';
 
-export const revalidate = 600;
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const baseUrl = process.env.PUBLIC_BASE_URL ?? 'http://localhost:3000';

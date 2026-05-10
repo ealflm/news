@@ -1,6 +1,6 @@
 import { listPublishedPosts } from '@/lib/posts';
 
-export const revalidate = 600;
+export const dynamic = 'force-dynamic';
 
 function escape(s: string): string {
   return s.replace(

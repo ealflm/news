@@ -4,7 +4,7 @@
 FROM node:20-bookworm-slim AS builder
 WORKDIR /repo
 
-ENV PNPM_VERSION=9.12.0 NODE_ENV=production COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+ENV PNPM_VERSION=9.12.0 COREPACK_ENABLE_DOWNLOAD_PROMPT=0 HUSKY=0
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 # Copy lockfile + workspace manifests first for better cache
