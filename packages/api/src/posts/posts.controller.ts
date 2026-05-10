@@ -92,8 +92,10 @@ export class PostsController {
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
-  @UsePipes(new ZodValidationPipe(UpdatePostInputSchema))
-  async update(@Param('id') id: string, @Body() body: UpdatePostInput) {
+  async update(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(UpdatePostInputSchema)) body: UpdatePostInput,
+  ) {
     return this.posts.update(id, body);
   }
 
