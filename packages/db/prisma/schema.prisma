@@ -12,6 +12,36 @@ model User {
   email        String   @unique
   passwordHash String
   displayName  String
+  posts        Post[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+}
+
+model Post {
+  id            String     @id @default(cuid())
+  slug          String     @unique
+  title         String
+  excerpt       String?    @db.Text
+  contentJson   Json
+  contentHtml   String     @db.Text
+  coverImageUrl String?
+  status        PostStatus @default(DRAFT)
+  publishedAt   DateTime?
+  scheduledAt   DateTime?
+  authorId      String
+  author        User       @relation(fields: [authorId], references: [id])
+  seoTitle      String?
+  seoDesc       String?
+  ogImageUrl    String?
+  viewCount     Int        @default(0)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  @@index([status, publishedAt])
 }
