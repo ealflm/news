@@ -6,7 +6,7 @@
     "dev": "nest start --watch",
     "build": "nest build",
     "start:prod": "node dist/main.js",
-    "test": "vitest run",
+    "test": "vitest run --config vitest.e2e.config.ts",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "lint": "eslint src test",
     "typecheck": "tsc --noEmit"
