@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export function LoginForm() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -19,13 +17,14 @@ export function LoginForm() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    setLoading(false);
     if (!res.ok) {
+      setLoading(false);
       setError(res.status === 401 ? 'Email hoặc mật khẩu sai' : 'Đăng nhập thất bại');
       return;
     }
-    router.push('/admin');
-    router.refresh();
+    // Full page navigation ensures the new cookies are picked up by the
+    // server middleware on the next /admin request.
+    window.location.href = '/admin';
   }
 
   return (
