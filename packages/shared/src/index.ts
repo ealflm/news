@@ -4,3 +4,5 @@ export * from './post.schemas';
 export * from './post.types';
 export * from './media.schemas';
 export * from './media.types';
+export * from './popup.schemas';
+export * from './popup.types';
