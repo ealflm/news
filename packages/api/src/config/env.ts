@@ -12,6 +12,7 @@ const EnvSchema = z.object({
   PUBLIC_BASE_URL: z.string().url(),
   UPLOADS_DIR: z.string().default('/home/ealflm/dev/news/uploads'),
   PUBLIC_UPLOADS_PREFIX: z.string().default('/uploads'),
+  HMAC_CLICK_SECRET: z.string().min(32),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
