@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { loadEnv } from '../config/env';
@@ -27,7 +27,7 @@ export class AuthService {
     return this.jwt.sign(payload, {
       secret: env.JWT_ACCESS_SECRET,
       expiresIn: env.JWT_ACCESS_TTL,
-    });
+    } as JwtSignOptions);
   }
 
   signRefreshToken(user: User): string {
@@ -36,6 +36,6 @@ export class AuthService {
     return this.jwt.sign(payload, {
       secret: env.JWT_REFRESH_SECRET,
       expiresIn: env.JWT_REFRESH_TTL,
-    });
+    } as JwtSignOptions);
   }
 }
