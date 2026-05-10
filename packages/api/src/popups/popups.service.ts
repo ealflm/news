@@ -83,6 +83,9 @@ export class PopupsService {
   }
 
   async delete(id: string): Promise<void> {
+    await this.prisma.clickEvent.deleteMany({ where: { popupId: id } });
+    await this.prisma.postPopupOverride.deleteMany({ where: { popupId: id } });
+    await this.prisma.popupLink.deleteMany({ where: { popupId: id } });
     await this.prisma.popup.delete({ where: { id } });
   }
 
