@@ -6,13 +6,15 @@ import type { Route } from 'next';
 import { TiptapEditor } from './tiptap-editor';
 import { PublishControls } from './publish-controls';
 import { CoverImagePicker } from './cover-image-picker';
-import type { AdminPost } from '@news/shared';
+import type { AdminPost, AdminPopup, OverrideAction } from '@news/shared';
 
 interface Props {
   initial?: AdminPost;
+  popups?: AdminPopup[];
+  initialOverrides?: { popupId: string; action: OverrideAction }[];
 }
 
-export function PostForm({ initial }: Props) {
+export function PostForm({ initial, popups, initialOverrides }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(initial?.title ?? '');
   const [slug, setSlug] = useState(initial?.slug ?? '');
@@ -23,8 +25,29 @@ export function PostForm({ initial }: Props) {
   const [contentJson, setContentJson] = useState<unknown>(
     initial?.contentJson ?? { type: 'doc', content: [] },
   );
+  const [overrides, setOverrides] = useState<{ popupId: string; action: OverrideAction }[]>(
+    initialOverrides ?? [],
+  );
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  async function saveOverrides(postId: string) {
+    await fetch(`/api/popups/overrides/${postId}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(overrides),
+    });
+  }
+  function setAction(popupId: string, action: OverrideAction | null) {
+    setOverrides((prev) => {
+      const without = prev.filter((o) => o.popupId !== popupId);
+      if (action === null) return without;
+      return [...without, { popupId, action }];
+    });
+  }
+  function getAction(popupId: string): OverrideAction | null {
+    return overrides.find((o) => o.popupId === popupId)?.action ?? null;
+  }
 
   async function save() {
     setSaving(true);
@@ -50,7 +73,10 @@ export function PostForm({ initial }: Props) {
     }
     const post = await res.json();
     if (!initial) router.push(`/admin/posts/${post.id}/edit` as Route);
-    else router.refresh();
+    else {
+      if (initial) await saveOverrides(initial.id);
+      router.refresh();
+    }
   }
 
   return (
@@ -106,6 +132,32 @@ export function PostForm({ initial }: Props) {
             />
           </div>
         </details>
+        {popups && popups.length > 0 && (
+          <details>
+            <summary className="cursor-pointer text-sm font-medium">Popup overrides</summary>
+            <div className="mt-2 space-y-1 text-xs">
+              {popups.map((p) => (
+                <div key={p.id} className="flex items-center justify-between gap-2">
+                  <span className="truncate">
+                    {p.name} {p.isGlobal && <em className="text-gray-500">(global)</em>}
+                  </span>
+                  <select
+                    value={getAction(p.id) ?? ''}
+                    onChange={(e) => {
+                      const v = e.target.value as '' | OverrideAction;
+                      setAction(p.id, v === '' ? null : v);
+                    }}
+                    className="rounded border px-1 py-0.5 text-xs"
+                  >
+                    <option value="">Default</option>
+                    <option value="ATTACH">Attach</option>
+                    <option value="DETACH">Detach</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
         <button
           type="button"
           onClick={save}
