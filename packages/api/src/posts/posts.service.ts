@@ -22,7 +22,11 @@ export class PostsService {
         contentHtml,
         coverImageUrl: input.coverImageUrl ?? null,
         status: input.status ?? 'DRAFT',
-        publishedAt: input.publishedAt ? new Date(input.publishedAt) : null,
+        publishedAt: input.publishedAt
+          ? new Date(input.publishedAt)
+          : input.status === 'PUBLISHED'
+            ? new Date()
+            : null,
         scheduledAt: input.scheduledAt ? new Date(input.scheduledAt) : null,
         seoTitle: input.seoTitle ?? null,
         seoDesc: input.seoDesc ?? null,

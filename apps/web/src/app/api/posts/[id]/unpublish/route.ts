@@ -11,7 +11,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     headers: { cookie },
   });
   if (upstream.ok) {
-    revalidatePath('/', 'layout');
+    const post = await upstream.clone().json();
+    if (post?.publishedAt && post?.slug) {
+      const d = new Date(post.publishedAt);
+      const yyyy = d.getUTCFullYear();
+      const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(d.getUTCDate()).padStart(2, '0');
+      revalidatePath(`/${yyyy}/${mm}/${dd}/${post.slug}`);
+    }
+    revalidatePath('/');
   }
   const text = await upstream.text();
   return new NextResponse(text, {

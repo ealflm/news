@@ -12,17 +12,24 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await getPublishedPostBySlug(slug);
   if (!post) return { title: 'Không tìm thấy' };
-  return {
-    title: post.seoTitle ?? post.title,
-    description: post.seoDesc ?? post.excerpt ?? undefined,
-    openGraph: {
-      title: post.seoTitle ?? post.title,
-      description: post.seoDesc ?? post.excerpt ?? undefined,
-      type: 'article',
-      images: post.ogImageUrl ?? post.coverImageUrl ?? undefined,
-      publishedTime: post.publishedAt,
-    },
+
+  const title = post.seoTitle ?? post.title;
+  const description = post.seoDesc ?? post.excerpt ?? undefined;
+  const ogImage = post.ogImageUrl ?? post.coverImageUrl;
+
+  const meta: Metadata = { title };
+  if (description) meta.description = description;
+
+  const og: NonNullable<Metadata['openGraph']> = {
+    title,
+    type: 'article',
+    publishedTime: post.publishedAt,
   };
+  if (description) og.description = description;
+  if (ogImage) og.images = [ogImage];
+  meta.openGraph = og;
+
+  return meta;
 }
 
 export default async function PostPage({
@@ -40,15 +47,17 @@ export default async function PostPage({
   ).padStart(2, '0')}`;
   if (expected !== `${year}/${month}/${day}`) notFound();
 
-  const jsonLd = {
+  const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
-    description: post.seoDesc ?? post.excerpt ?? undefined,
-    image: post.ogImageUrl ?? post.coverImageUrl ?? undefined,
     datePublished: post.publishedAt,
     author: { '@type': 'Person', name: post.author.displayName },
   };
+  const description = post.seoDesc ?? post.excerpt;
+  if (description) jsonLd.description = description;
+  const image = post.ogImageUrl ?? post.coverImageUrl;
+  if (image) jsonLd.image = image;
 
   return (
     <main className="mx-auto max-w-3xl p-6">
