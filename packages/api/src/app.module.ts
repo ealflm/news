@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PostsModule } from './posts/posts.module';
 import { MediaModule } from './media/media.module';
+import { PopupsModule } from './popups/popups.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { MediaModule } from './media/media.module';
     AuthModule,
     PostsModule,
     MediaModule,
+    PopupsModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
