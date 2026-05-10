@@ -20,8 +20,9 @@ export class MediaService {
   async uploadImage(uploaderId: string, file: Express.Multer.File): Promise<Media> {
     if (!file?.buffer) throw new BadRequestException('no file');
 
-    // Dynamic import because file-type is ESM-only
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // Dynamic import because file-type is ESM-only; ts-expect-error suppresses moduleResolution warning
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error file-type is ESM-only and requires node16/bundler moduleResolution
     const { fileTypeFromBuffer } = (await import('file-type')) as FileTypeModule;
     const detected = await fileTypeFromBuffer(file.buffer);
     if (!detected || !ALLOWED_IMAGE_MIME.has(detected.mime)) {
