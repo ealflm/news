@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getPublishedPostBySlug } from '@/lib/posts';
+import { getPopupBundleBase64 } from '@/lib/popups';
 
 export const revalidate = 300;
 
@@ -59,6 +60,8 @@ export default async function PostPage({
   const image = post.ogImageUrl ?? post.coverImageUrl;
   if (image) jsonLd.image = image;
 
+  const popupBase64 = await getPopupBundleBase64(post.id);
+
   return (
     <main className="mx-auto max-w-3xl p-6">
       <script
@@ -83,6 +86,7 @@ export default async function PostPage({
           dangerouslySetInnerHTML={{ __html: post.contentHtml }}
         />
       </article>
+      {popupBase64 && <script async src={`data:text/javascript;base64,${popupBase64}`} />}
     </main>
   );
 }
