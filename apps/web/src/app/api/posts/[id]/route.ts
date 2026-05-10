@@ -10,6 +10,16 @@ async function passthrough(upstream: Response): Promise<NextResponse> {
   });
 }
 
+export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const { id } = await ctx.params;
+  const cookie = req.headers.get('cookie') ?? '';
+  return passthrough(
+    await fetch(`${API_URL}/api/posts/${id}`, {
+      headers: { cookie },
+    }),
+  );
+}
+
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const body = await req.text();

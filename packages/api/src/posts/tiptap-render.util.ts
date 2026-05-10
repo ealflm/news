@@ -1,4 +1,5 @@
-import { generateHTML } from '@tiptap/html';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { generateHTML } = require('@tiptap/html/server') as typeof import('@tiptap/html');
 import StarterKit from '@tiptap/starter-kit';
 
 const EXTENSIONS = [StarterKit];
