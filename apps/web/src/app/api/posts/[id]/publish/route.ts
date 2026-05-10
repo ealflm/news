@@ -20,6 +20,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       revalidatePath(`/${yyyy}/${mm}/${dd}/${post.slug}`);
       revalidatePath('/');
     }
+    revalidatePath('/sitemap.xml');
+    revalidatePath('/rss.xml');
   }
   const text = await upstream.text();
   return new NextResponse(text, {
