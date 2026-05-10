@@ -40,9 +40,10 @@ model Post {
   seoTitle      String?
   seoDesc       String?
   ogImageUrl    String?
-  viewCount     Int        @default(0)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  viewCount      Int                 @default(0)
+  popupOverrides PostPopupOverride[]
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@index([status, publishedAt])
 }
@@ -68,4 +69,78 @@ model Media {
   createdAt     DateTime  @default(now())
 
   @@index([uploadedById, createdAt])
+}
+
+model Popup {
+  id                String              @id @default(cuid())
+  name              String
+  bannerUrl         String
+  delayMs           Int
+  isGlobal          Boolean             @default(false)
+  enabled           Boolean             @default(true)
+  cookieKey         String              @unique
+  cookieDays        Int                 @default(1)
+  forceClickOnClose Boolean             @default(false)
+  hideOnDesktop     Boolean             @default(true)
+  hideOnBot         Boolean             @default(true)
+  configVersion     Int                 @default(1)
+  links             PopupLink[]
+  postOverrides     PostPopupOverride[]
+  clickEvents       ClickEvent[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+}
+
+enum LinkPlatform {
+  SHOPEE
+  TIKTOK
+  LAZADA
+  OTHER
+}
+
+enum LinkDevice {
+  IOS_FB
+  IOS_SAFARI
+  ANDROID
+  DESKTOP_FALLBACK
+}
+
+model PopupLink {
+  id        String       @id @default(cuid())
+  popupId   String
+  popup     Popup        @relation(fields: [popupId], references: [id], onDelete: Cascade)
+  platform  LinkPlatform
+  device    LinkDevice
+  url       String       @db.Text
+  label     String?
+  @@unique([popupId, platform, device])
+}
+
+enum OverrideAction {
+  ATTACH
+  DETACH
+}
+
+model PostPopupOverride {
+  id      String         @id @default(cuid())
+  postId  String
+  post    Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  popupId String
+  popup   Popup          @relation(fields: [popupId], references: [id], onDelete: Cascade)
+  action  OverrideAction
+  order   Int            @default(0)
+  @@unique([postId, popupId])
+}
+
+model ClickEvent {
+  id        String   @id @default(cuid())
+  popupId   String
+  popup     Popup    @relation(fields: [popupId], references: [id])
+  postId    String?
+  sessionId String?
+  device    String?
+  trigger   String?
+  createdAt DateTime @default(now())
+  @@index([popupId, createdAt])
+  @@index([postId, createdAt])
 }
