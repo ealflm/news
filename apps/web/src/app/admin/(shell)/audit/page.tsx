@@ -28,7 +28,9 @@ export default async function AuditPage() {
               <span className="rounded-md bg-muted px-2 py-0.5 font-mono text-xs">
                 {ACTION_LABEL[i.action] ?? i.action}
               </span>
-              <span className="truncate text-ink">{i.actorEmail ?? 'system'}</span>
+              <span className="truncate text-ink">
+                {i.actorUsername ? `@${i.actorUsername}` : 'system'}
+              </span>
               <span className="text-muted-fg">·</span>
               <span className="truncate text-muted-fg">
                 {i.targetType}

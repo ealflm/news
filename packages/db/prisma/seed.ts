@@ -16,19 +16,19 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const email = process.env.SEED_ADMIN_EMAIL ?? 'admin@local.test';
+  const username = process.env.SEED_ADMIN_USERNAME ?? 'admin';
   const password = process.env.SEED_ADMIN_PASSWORD ?? 'Admin123!@#';
   const name = process.env.SEED_ADMIN_NAME ?? 'Admin';
 
   const passwordHash = await bcrypt.hash(password, 12);
 
   const user = await prisma.user.upsert({
-    where: { email },
+    where: { username },
     update: {},
-    create: { email, passwordHash, displayName: name },
+    create: { username, passwordHash, displayName: name },
   });
 
-  console.log(`Seeded user: ${user.email}`);
+  console.log(`Seeded admin user: @${user.username}`);
 }
 
 main()

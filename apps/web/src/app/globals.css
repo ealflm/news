@@ -1,4 +1,14 @@
-@import 'tailwindcss';
+@import 'tailwindcss/theme';
+@import 'tailwindcss/utilities';
+
+/* Scope Tailwind preflight to skip rich content regions so semantic
+   HTML (h1-h6, ul, table, etc.) retains browser defaults inside the
+   TipTap editor and the public post body. Brand styling for these
+   regions still lives in the .prose-news rules below. */
+@plugin "tailwindcss-scoped-preflight" {
+  isolation-strategy: outside;
+  selector: .prose-news, .ProseMirror;
+}
 
 @theme {
   /* Brand colors — Swiss Minimalism: calm blue + soft white
@@ -121,11 +131,30 @@
   max-width: 100%;
   height: auto;
 }
-.prose-news iframe {
+.prose-news iframe,
+.ProseMirror iframe {
   border-radius: var(--radius-lg);
   margin: 1.5rem 0;
   width: 100%;
   aspect-ratio: 16/9;
+}
+
+/* Wrappers handle their own sizing/margins — let nested iframes fill the wrapper exactly */
+.prose-news .iframe-wrap,
+.ProseMirror .iframe-wrap,
+.prose-news .embed-wrap,
+.ProseMirror .embed-wrap {
+  margin: 1.5rem 0;
+}
+.prose-news .iframe-wrap iframe,
+.ProseMirror .iframe-wrap iframe,
+.prose-news .embed-wrap iframe,
+.ProseMirror .embed-wrap iframe {
+  margin: 0;
+  border-radius: 0;
+  aspect-ratio: auto;
+  width: 100%;
+  height: 100%;
 }
 
 /* Task list (TipTap) — both editor + public render */

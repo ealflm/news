@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Mail, Lock } from 'lucide-react';
+import { User as UserIcon, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 export function LoginForm() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,38 +18,39 @@ export function LoginForm() {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username: username.trim(), password }),
     });
     if (!res.ok) {
       setLoading(false);
-      setError(res.status === 401 ? 'Email hoặc mật khẩu sai' : 'Đăng nhập thất bại');
+      setError(res.status === 401 ? 'Tên đăng nhập hoặc mật khẩu sai' : 'Đăng nhập thất bại');
       return;
     }
-    // Full page navigation ensures the new cookies are picked up by the
-    // server middleware on the next /admin request.
     window.location.href = '/admin';
   }
 
   return (
     <form onSubmit={onSubmit} className="space-y-4" noValidate>
       <div className="space-y-1.5">
-        <label htmlFor="email" className="block text-sm font-medium text-ink">
-          Email
+        <label htmlFor="username" className="block text-sm font-medium text-ink">
+          Tên đăng nhập
         </label>
         <div className="relative">
-          <Mail
+          <UserIcon
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-fg"
             aria-hidden="true"
           />
           <Input
-            id="email"
-            type="email"
-            autoComplete="email"
+            id="username"
+            type="text"
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             className="pl-10"
-            placeholder="ban@example.com"
+            placeholder="admin"
           />
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
+import { toast } from 'react-toastify';
 import type { AdminPost, AdminPopup, OverrideAction } from '@news/shared';
 import { Textarea } from '@/components/ui/textarea';
 import { TiptapEditor } from './tiptap-editor';
@@ -63,7 +64,6 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
 
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(
     initial ? new Date(initial.updatedAt) : null,
   );
@@ -118,11 +118,10 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
 
   async function save(): Promise<boolean> {
     if (!title.trim()) {
-      setErr('Tiêu đề là bắt buộc');
+      toast.error('Tiêu đề là bắt buộc');
       return false;
     }
     setSaving(true);
-    setErr(null);
     const payload: Record<string, unknown> = { title, contentJson };
     if (slug) payload.slug = slug;
     if (excerpt) payload.excerpt = excerpt;
@@ -139,9 +138,10 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
     });
     setSaving(false);
     if (!res.ok) {
-      setErr(`Lưu thất bại (${res.status})`);
+      toast.error(`Lưu thất bại (${res.status})`);
       return false;
     }
+    toast.success(initial ? 'Đã lưu thay đổi' : 'Đã tạo bài viết');
     const post = await res.json();
     setLastSavedAt(new Date());
     setDirty(false);
@@ -170,7 +170,12 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
     }
     const r = await fetch(`/api/posts/${initial.id}/publish`, { method: 'POST' });
     setPublishing(false);
-    if (r.ok) router.refresh();
+    if (r.ok) {
+      toast.success('Đã xuất bản');
+      router.refresh();
+    } else {
+      toast.error(`Xuất bản thất bại (${r.status})`);
+    }
   }
 
   async function unpublish() {
@@ -178,7 +183,12 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
     setPublishing(true);
     const r = await fetch(`/api/posts/${initial.id}/unpublish`, { method: 'POST' });
     setPublishing(false);
-    if (r.ok) router.refresh();
+    if (r.ok) {
+      toast.success('Đã bỏ xuất bản');
+      router.refresh();
+    } else {
+      toast.error(`Bỏ xuất bản thất bại (${r.status})`);
+    }
   }
 
   const wordCount = countWords(contentJson);
@@ -205,8 +215,8 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
         isPublished={initial?.status === 'PUBLISHED'}
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        {/* Main column */}
+      <div className="mx-auto grid w-full max-w-[1120px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,768px)_320px]">
+        {/* Main column — width matches public post page (max-w-3xl ≈ 768px) */}
         <div className="min-w-0 space-y-5">
           <div className="space-y-2">
             <label htmlFor="post-title" className="sr-only">
@@ -271,15 +281,6 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
             <span aria-hidden="true">·</span>
             <span className={dirty ? 'text-accent' : ''}>{savedLabel}</span>
           </div>
-
-          {err && (
-            <div
-              role="alert"
-              className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-            >
-              {err}
-            </div>
-          )}
         </div>
 
         {/* Aside */}

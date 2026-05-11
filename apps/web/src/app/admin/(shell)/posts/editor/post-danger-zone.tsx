@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import type { Route } from 'next';
 
@@ -21,9 +22,10 @@ export function PostDangerZone({ postId, postTitle }: Props) {
     const r = await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
     setBusy(false);
     if (!r.ok) {
-      alert(`Xóa thất bại (${r.status})`);
+      toast.error(`Xóa thất bại (${r.status})`);
       return;
     }
+    toast.success('Đã xóa bài viết');
     router.push('/admin/posts' as Route);
   }
 

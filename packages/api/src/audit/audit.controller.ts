@@ -24,7 +24,7 @@ export class AuditController {
     return {
       items: result.items.map((i) => ({
         id: i.id,
-        actorEmail: i.actor?.email ?? null,
+        actorUsername: i.actor?.username ?? null,
         action: i.action,
         targetType: i.targetType,
         targetId: i.targetId,

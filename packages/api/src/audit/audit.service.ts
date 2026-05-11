@@ -39,7 +39,7 @@ export class AuditService {
       orderBy: { createdAt: 'desc' },
       take: opts.limit + 1,
       ...(opts.cursor ? { cursor: { id: opts.cursor }, skip: 1 } : {}),
-      include: { actor: { select: { email: true } } },
+      include: { actor: { select: { username: true } } },
     });
     const nextCursor = items.length > opts.limit ? (items[opts.limit]?.id ?? null) : null;
     return { items: items.slice(0, opts.limit), nextCursor };

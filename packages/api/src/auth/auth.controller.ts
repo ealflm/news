@@ -41,14 +41,20 @@ export class AuthController {
   @HttpCode(200)
   @UsePipes(new ZodValidationPipe(LoginInputSchema))
   async login(@Body() body: LoginInput, @Res({ passthrough: true }) res: Response) {
-    const user = await this.auth.validateCreds(body.email, body.password);
+    const user = await this.auth.validateCreds(body.username, body.password);
     const access = this.auth.signAccessToken(user);
     const refresh = this.auth.signRefreshToken(user);
 
     res.cookie('access_token', access.token, { ...baseCookie, maxAge: ACCESS_MS });
     res.cookie('refresh_token', refresh.token, { ...baseCookie, maxAge: REFRESH_MS });
 
-    return { user: { id: user.id, email: user.email, displayName: user.displayName } };
+    return {
+      user: {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+      },
+    };
   }
 
   @Get('me')
@@ -56,7 +62,11 @@ export class AuthController {
   async me(@Req() req: Request) {
     const payload = req.user as { sub: string };
     const user = await this.users.findByIdOrThrow(payload.sub);
-    return { id: user.id, email: user.email, displayName: user.displayName };
+    return {
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+    };
   }
 
   @Post('refresh')

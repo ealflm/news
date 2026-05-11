@@ -1,3 +1,5 @@
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { AdminSidebar } from '../_components/admin-sidebar';
 import { AdminTopbar } from '../_components/admin-topbar';
 
@@ -9,6 +11,15 @@ export default function AdminShellLayout({ children }: { children: React.ReactNo
         <AdminTopbar />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
+      <ToastContainer
+        position="top-center"
+        autoClose={4000}
+        newestOnTop
+        closeOnClick
+        pauseOnFocusLoss={false}
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

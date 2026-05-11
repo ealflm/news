@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { cookies } from 'next/headers';
 import {
   Eye,
   MousePointerClick,
@@ -13,20 +12,8 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { getAnalyticsOverview } from '@/lib/analytics';
+import { getMe } from '@/lib/auth';
 import { AnalyticsChart } from './analytics/analytics-chart';
-
-const API_URL = process.env.API_URL ?? 'http://localhost:4000';
-
-async function getMe(): Promise<{ email: string; displayName: string } | null> {
-  const cookie = (await cookies()).get('access_token');
-  if (!cookie) return null;
-  const res = await fetch(`${API_URL}/api/auth/me`, {
-    headers: { cookie: `access_token=${cookie.value}` },
-    cache: 'no-store',
-  });
-  if (!res.ok) return null;
-  return (await res.json()) as { email: string; displayName: string };
-}
 
 const SHORTCUTS = [
   { href: '/admin/posts/new' as Route, label: 'Tạo bài viết mới', Icon: FileText },

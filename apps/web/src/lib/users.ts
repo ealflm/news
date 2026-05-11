@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import type { UserListItem, PendingInvite, AuditLogItem } from '@news/shared';
+import type { UserListItem, AuditLogItem } from '@news/shared';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -14,15 +14,6 @@ export async function listUsers(): Promise<UserListItem[]> {
     cache: 'no-store',
   });
   if (!r.ok) throw new Error(`listUsers failed: ${r.status}`);
-  return r.json();
-}
-
-export async function listPendingInvites(): Promise<PendingInvite[]> {
-  const r = await fetch(`${API_URL}/api/users/invites`, {
-    headers: await authHeaders(),
-    cache: 'no-store',
-  });
-  if (!r.ok) return [];
   return r.json();
 }
 

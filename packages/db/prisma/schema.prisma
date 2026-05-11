@@ -7,28 +7,15 @@ datasource db {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
+  id           String     @id @default(cuid())
+  username     String     @unique
   passwordHash String
   displayName  String
   posts        Post[]
   media        Media[]
-  invites      UserInvite[] @relation("InvitedBy")
-  auditLogs    AuditLog[]   @relation("AuditActor")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-}
-
-model UserInvite {
-  id          String    @id @default(cuid())
-  email       String    @unique
-  invitedById String
-  invitedBy   User      @relation("InvitedBy", fields: [invitedById], references: [id])
-  tokenHash   String    @unique
-  expiresAt   DateTime
-  acceptedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  @@index([expiresAt])
+  auditLogs    AuditLog[] @relation("AuditActor")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model AuditLog {

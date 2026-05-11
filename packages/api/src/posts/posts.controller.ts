@@ -35,9 +35,18 @@ export class PostsController {
 
   // Public read
   @Get('published')
-  async listPublic(@Query('limit') limitRaw?: string, @Query('cursor') cursor?: string) {
+  async listPublic(
+    @Query('limit') limitRaw?: string,
+    @Query('cursor') cursor?: string,
+    @Query('q') q?: string,
+  ) {
     const limit = Math.min(Math.max(Number(limitRaw ?? 20), 1), 50);
-    return this.posts.listPublished({ limit, ...(cursor ? { cursor } : {}) });
+    const cleanQ = (q ?? '').trim().slice(0, 100);
+    return this.posts.listPublished({
+      limit,
+      ...(cursor ? { cursor } : {}),
+      ...(cleanQ ? { q: cleanQ } : {}),
+    });
   }
 
   @Get('published/:slug')

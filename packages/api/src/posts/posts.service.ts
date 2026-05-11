@@ -126,9 +126,17 @@ export class PostsService {
     return { items: items.slice(0, query.limit), nextCursor };
   }
 
-  async listPublished(query: { cursor?: string; limit: number }) {
+  async listPublished(query: { cursor?: string; limit: number; q?: string }) {
+    const where: { status: PostStatus; OR?: unknown[] } = { status: 'PUBLISHED' };
+    if (query.q) {
+      where.OR = [
+        { title: { contains: query.q, mode: 'insensitive' } },
+        { excerpt: { contains: query.q, mode: 'insensitive' } },
+        { slug: { contains: query.q, mode: 'insensitive' } },
+      ];
+    }
     const items = await this.prisma.post.findMany({
-      where: { status: 'PUBLISHED' },
+      where: where as never,
       orderBy: { publishedAt: 'desc' },
       take: query.limit + 1,
       ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),

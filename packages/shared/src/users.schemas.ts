@@ -1,36 +1,34 @@
 import { z } from 'zod';
 
-export const InviteUserInputSchema = z.object({
-  email: z.string().email(),
-  displayName: z.string().min(1).max(120).optional(),
-});
-export type InviteUserInput = z.infer<typeof InviteUserInputSchema>;
+const usernameField = z
+  .string()
+  .trim()
+  .min(3)
+  .max(60)
+  .regex(/^[a-zA-Z0-9._-]+$/, 'username chỉ gồm a-z, 0-9, dấu . _ -');
 
-export const AcceptInviteInputSchema = z.object({
-  token: z.string().min(20),
-  displayName: z.string().min(1).max(120),
+export const CreateUserInputSchema = z.object({
+  username: usernameField,
+  password: z.string().min(8).max(128),
+  displayName: z.string().trim().min(1).max(120),
+});
+export type CreateUserInput = z.infer<typeof CreateUserInputSchema>;
+
+export const SetPasswordInputSchema = z.object({
   password: z.string().min(8).max(128),
 });
-export type AcceptInviteInput = z.infer<typeof AcceptInviteInputSchema>;
+export type SetPasswordInput = z.infer<typeof SetPasswordInputSchema>;
 
 export interface UserListItem {
   id: string;
-  email: string;
+  username: string;
   displayName: string;
-  createdAt: string;
-}
-
-export interface PendingInvite {
-  id: string;
-  email: string;
-  invitedByEmail: string | null;
-  expiresAt: string;
   createdAt: string;
 }
 
 export interface AuditLogItem {
   id: string;
-  actorEmail: string | null;
+  actorUsername: string | null;
   action: string;
   targetType: string;
   targetId: string | null;

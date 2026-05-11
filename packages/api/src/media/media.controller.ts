@@ -66,10 +66,17 @@ export class MediaController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get(':id/usages')
+  async usages(@Param('id') id: string) {
+    const { posts } = await this.media.findUsages(id);
+    return { count: posts.length, posts };
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(204)
-  async remove(@Param('id') id: string) {
-    await this.media.delete(id);
+  async remove(@Param('id') id: string, @Query('force') force?: string) {
+    await this.media.delete(id, { force: force === 'true' || force === '1' });
   }
 }
 

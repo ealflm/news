@@ -9,7 +9,6 @@ import {
   Image as ImageIcon,
   Sparkles,
   BarChart3,
-  Settings,
   LogOut,
   Newspaper,
   Users,
@@ -19,12 +18,11 @@ import {
 const NAV: Array<{ href: Route; label: string; Icon: typeof LayoutDashboard }> = [
   { href: '/admin' as Route, label: 'Dashboard', Icon: LayoutDashboard },
   { href: '/admin/posts' as Route, label: 'Bài viết', Icon: FileText },
-  { href: '/admin/media' as Route, label: 'Media', Icon: ImageIcon },
   { href: '/admin/popups' as Route, label: 'Popups', Icon: Sparkles },
   { href: '/admin/analytics' as Route, label: 'Analytics', Icon: BarChart3 },
+  { href: '/admin/media' as Route, label: 'Media', Icon: ImageIcon },
   { href: '/admin/users' as Route, label: 'Người dùng', Icon: Users },
   { href: '/admin/audit' as Route, label: 'Audit log', Icon: History },
-  { href: '/admin/settings' as Route, label: 'Cài đặt', Icon: Settings },
 ];
 
 export function AdminSidebar() {

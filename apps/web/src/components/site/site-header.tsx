@@ -32,12 +32,6 @@ export function SiteHeader() {
           >
             Tìm kiếm
           </Link>
-          <Link
-            href={'/chinh-sach' as Route}
-            className="text-sm font-medium text-ink/80 transition-colors hover:text-primary"
-          >
-            Chính sách
-          </Link>
         </nav>
 
         <Link

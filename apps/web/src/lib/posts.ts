@@ -37,15 +37,19 @@ export async function getAdminPost(id: string): Promise<AdminPost | null> {
   return res.json();
 }
 
-export async function listPublishedPosts(opts: { limit?: number; cursor?: string } = {}): Promise<{
+export async function listPublishedPosts(
+  opts: { limit?: number; cursor?: string; q?: string } = {},
+): Promise<{
   items: (PostListItem & { author: { displayName: string } })[];
   nextCursor: string | null;
 }> {
   const params = new URLSearchParams();
   params.set('limit', String(opts.limit ?? 20));
   if (opts.cursor) params.set('cursor', opts.cursor);
+  if (opts.q) params.set('q', opts.q);
   const res = await fetch(`${API_URL}/api/posts/published?${params}`, {
-    next: { revalidate: 60 },
+    // Search results should not be cached cross-query — bypass on q
+    ...(opts.q ? { cache: 'no-store' as const } : { next: { revalidate: 60 } }),
   });
   if (!res.ok) throw new Error(`listPublishedPosts failed: ${res.status}`);
   return res.json();

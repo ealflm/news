@@ -25,13 +25,31 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
   const { id } = await ctx.params;
   const body = await req.text();
   const cookie = req.headers.get('cookie') ?? '';
-  return passthrough(
-    await fetch(`${API_URL}/api/posts/${id}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json', cookie },
-      body,
-    }),
-  );
+  const upstream = await fetch(`${API_URL}/api/posts/${id}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json', cookie },
+    body,
+  });
+
+  if (upstream.ok) {
+    try {
+      const post = await upstream.clone().json();
+      if (post?.publishedAt && post?.slug) {
+        const d = new Date(post.publishedAt);
+        const yyyy = d.getUTCFullYear();
+        const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+        const dd = String(d.getUTCDate()).padStart(2, '0');
+        revalidatePath(`/${yyyy}/${mm}/${dd}/${post.slug}`);
+        revalidatePath('/');
+      }
+      revalidatePath('/sitemap.xml');
+      revalidatePath('/rss.xml');
+    } catch {
+      // best-effort; revalidation failures shouldn't fail the request
+    }
+  }
+
+  return passthrough(upstream);
 }
 
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {

@@ -5,6 +5,7 @@ import {
   Get,
   HttpCode,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -14,69 +15,49 @@ import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { ZodValidationPipe } from '../auth/zod.pipe';
 import { UsersService } from './users.service';
 import {
-  InviteUserInputSchema,
-  AcceptInviteInputSchema,
-  type InviteUserInput,
-  type AcceptInviteInput,
+  CreateUserInputSchema,
+  SetPasswordInputSchema,
+  type CreateUserInput,
+  type SetPasswordInput,
 } from '@news/shared';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly users: UsersService) {}
 
-  // PUBLIC: accept invite (no auth)
-  @Post('accept-invite')
-  @HttpCode(201)
-  async acceptInvite(
-    @Body(new ZodValidationPipe(AcceptInviteInputSchema)) body: AcceptInviteInput,
-  ) {
-    const user = await this.users.acceptInvite(body.token, body.displayName, body.password);
-    return { id: user.id, email: user.email, displayName: user.displayName };
-  }
-
-  // ADMIN endpoints
   @UseGuards(JwtAuthGuard)
   @Get()
   async list() {
     const items = await this.users.list();
     return items.map((u) => ({
       id: u.id,
-      email: u.email,
+      username: u.username,
       displayName: u.displayName,
       createdAt: u.createdAt.toISOString(),
     }));
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('invites')
-  async listInvites() {
-    const items = await this.users.listPendingInvites();
-    return items.map((i) => ({
-      id: i.id,
-      email: i.email,
-      invitedByEmail: i.invitedBy?.email ?? null,
-      expiresAt: i.expiresAt.toISOString(),
-      createdAt: i.createdAt.toISOString(),
-    }));
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Post('invite')
+  @Post()
   @HttpCode(201)
-  async invite(
-    @Body(new ZodValidationPipe(InviteUserInputSchema)) body: InviteUserInput,
-    @Req() req: Request,
-  ) {
-    const user = req.user as { sub: string };
-    const result = await this.users.invite(user.sub, body.email, body.displayName);
-    return result;
+  async create(@Body(new ZodValidationPipe(CreateUserInputSchema)) body: CreateUserInput) {
+    const user = await this.users.createUser(body);
+    return {
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      createdAt: user.createdAt.toISOString(),
+    };
   }
 
   @UseGuards(JwtAuthGuard)
-  @Delete('invites/:id')
+  @Patch(':id/password')
   @HttpCode(204)
-  async revokeInvite(@Param('id') id: string) {
-    await this.users.revokeInvite(id);
+  async setPassword(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(SetPasswordInputSchema)) body: SetPasswordInput,
+  ) {
+    await this.users.setPassword(id, body.password);
   }
 
   @UseGuards(JwtAuthGuard)

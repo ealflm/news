@@ -4,8 +4,12 @@ import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import { editorExtensions } from './tiptap-extensions';
 import { ToolbarPopover } from './toolbar-popover';
 import { EmojiPicker } from './emoji-picker';
-import { useEffect } from 'react';
+import { MediaPicker, type MediaPickerResult } from './media-picker';
+import { PromptDialog, type PromptConfig } from './prompt-dialog';
+import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import type { MediaRecord } from '@news/shared';
+import { uploadMediaWithToast } from '@/components/ui/upload-toast';
 import {
   Undo2,
   Redo2,
@@ -16,8 +20,6 @@ import {
   Code,
   Code2,
   Link as LinkIcon,
-  Image as ImageIcon,
-  Video as VideoIcon,
   MonitorPlay as YoutubeIcon,
   Smile,
   Heading1,
@@ -42,8 +44,10 @@ import {
   Plus,
   Globe,
   CodeXml,
+  Gamepad2,
   ChevronDown,
   RemoveFormatting,
+  FolderOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -84,30 +88,38 @@ const HIGHLIGHT_COLORS = [
 ];
 
 async function uploadImage(file: File): Promise<string | null> {
-  const fd = new FormData();
-  fd.append('file', file);
-  const res = await fetch('/api/media', { method: 'POST', body: fd });
-  if (!res.ok) return null;
-  const data = (await res.json()) as { media: MediaRecord };
-  if (data.media.variants && typeof data.media.variants === 'object') {
-    const v = data.media.variants as Record<string, string>;
-    const path = v['1280w'] ?? v['720w'] ?? v['320w'] ?? data.media.originalPath;
+  const res = await uploadMediaWithToast(file);
+  if (!res.ok || !res.media) return null;
+  const m = res.media;
+  if (m.variants && typeof m.variants === 'object') {
+    const v = m.variants as Record<string, string>;
+    const path = v['1280w'] ?? v['720w'] ?? v['320w'] ?? m.originalPath;
     return path ? `${API_URL}${path}` : null;
   }
-  return data.media.originalPath ? `${API_URL}${data.media.originalPath}` : null;
+  return m.originalPath ? `${API_URL}${m.originalPath}` : null;
+}
+
+/**
+ * Warn before self-hosting a video. YouTube embed is much cheaper for server storage + bandwidth.
+ * Returns true if admin confirmed they still want to upload.
+ */
+function confirmVideoUpload(): boolean {
+  return window.confirm(
+    'Khuyến nghị: nên upload video lên YouTube rồi nhúng vào bài (Add → YouTube). ' +
+      'Cách này tiết kiệm dung lượng ổ đĩa và bandwidth của server, đặc biệt khi nhiều người xem cùng lúc.\n\n' +
+      'Bạn vẫn muốn upload video trực tiếp lên server?',
+  );
 }
 
 async function uploadVideoFile(file: File): Promise<{ src: string; poster?: string } | null> {
-  const fd = new FormData();
-  fd.append('file', file);
-  const res = await fetch('/api/media', { method: 'POST', body: fd });
-  if (!res.ok) return null;
-  const data = (await res.json()) as { media: MediaRecord };
-  const v = (data.media.variants ?? null) as Record<string, string> | null;
+  const res = await uploadMediaWithToast(file);
+  if (!res.ok || !res.media) return null;
+  const m = res.media;
+  const v = (m.variants ?? null) as Record<string, string> | null;
   const src = v?.['720p']
     ? `${API_URL}${v['720p']}`
-    : data.media.originalPath
-      ? `${API_URL}${data.media.originalPath}`
+    : m.originalPath
+      ? `${API_URL}${m.originalPath}`
       : null;
   if (!src) return null;
   const poster = v?.poster ? `${API_URL}${v.poster}` : undefined;
@@ -164,6 +176,7 @@ function Divider() {
 }
 
 export function TiptapEditor({ content, onChange }: Props) {
+  const [libraryKind, setLibraryKind] = useState<'IMAGE' | 'VIDEO' | null>(null);
   const editor = useEditor({
     extensions: editorExtensions,
     content: (content ?? { type: 'doc', content: [] }) as never,
@@ -174,7 +187,7 @@ export function TiptapEditor({ content, onChange }: Props) {
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm max-w-none min-h-[420px] rounded-b-md border border-t-0 border-border bg-surface px-4 py-3 text-ink focus:outline-none',
+          'prose-news max-w-none min-h-[420px] rounded-b-md border border-t-0 border-border bg-surface px-4 py-3 text-ink focus:outline-none',
       },
       handleDrop: (view, event, _slice, moved) => {
         if (moved) return false;
@@ -198,6 +211,7 @@ export function TiptapEditor({ content, onChange }: Props) {
         }
         if (file.type.startsWith('video/')) {
           event.preventDefault();
+          if (!confirmVideoUpload()) return true;
           void uploadVideoFile(file).then((result) => {
             if (result) {
               const { schema } = view.state;
@@ -248,88 +262,152 @@ export function TiptapEditor({ content, onChange }: Props) {
 
   if (!editor) return null;
 
+  function handlePick(r: MediaPickerResult) {
+    if (!editor) return;
+    if (r.media.kind === 'IMAGE') {
+      editor.chain().focus().setImage({ src: r.url }).run();
+    } else {
+      editor
+        .chain()
+        .focus()
+        .insertContent({
+          type: 'video',
+          attrs: { src: r.url, ...(r.poster ? { poster: r.poster } : {}) },
+        })
+        .run();
+    }
+    setLibraryKind(null);
+  }
+
   return (
     <div className="rounded-md">
-      <Toolbar editor={editor} />
+      <Toolbar editor={editor} onOpenLibrary={(k) => setLibraryKind(k)} />
       <EditorContent editor={editor} />
+      <MediaPicker
+        open={libraryKind !== null}
+        kind={libraryKind ?? 'IMAGE'}
+        onClose={() => setLibraryKind(null)}
+        onPick={handlePick}
+      />
     </div>
   );
 }
 
-function Toolbar({ editor }: { editor: Editor }) {
-  /* ------ helpers ------ */
-  async function pickImage() {
-    const inp = document.createElement('input');
-    inp.type = 'file';
-    inp.accept = 'image/*';
-    inp.onchange = async () => {
-      const f = inp.files?.[0];
-      if (!f) return;
-      const url = await uploadImage(f);
-      if (url) editor.chain().focus().setImage({ src: url }).run();
-    };
-    inp.click();
-  }
+function Toolbar({
+  editor,
+  onOpenLibrary,
+}: {
+  editor: Editor;
+  onOpenLibrary: (kind: 'IMAGE' | 'VIDEO') => void;
+}) {
+  const [promptConfig, setPromptConfig] = useState<PromptConfig | null>(null);
 
-  async function pickVideo() {
-    const inp = document.createElement('input');
-    inp.type = 'file';
-    inp.accept = 'video/*';
-    inp.onchange = async () => {
-      const f = inp.files?.[0];
-      if (!f) return;
-      const r = await uploadVideoFile(f);
-      if (r) {
+  /* ------ helpers ------ */
+  function addEmbedFromUrlPrompt() {
+    setPromptConfig({
+      title: 'Embed URL',
+      description: 'Dán URL của TikTok / YouTube / Facebook / Spotify.',
+      placeholder: 'https://...',
+      submitLabel: 'Chèn',
+      onSubmit: async (raw) => {
+        const url = raw.trim();
+        if (!url) return false;
+        const r = await createEmbedFromUrl(url);
+        if (!r) {
+          toast.error('Không lấy được embed từ URL này.');
+          return false;
+        }
         editor
           .chain()
           .focus()
-          .insertContent({
-            type: 'video',
-            attrs: { src: r.src, ...(r.poster ? { poster: r.poster } : {}) },
-          })
+          .insertContent({ type: 'embed', attrs: { html: r.html, provider: r.provider } })
           .run();
-      }
-    };
-    inp.click();
+      },
+    });
   }
 
-  async function addEmbedFromUrl() {
-    const url = window.prompt('Dán URL YouTube / TikTok / Facebook / Spotify:');
-    if (!url) return;
-    const r = await createEmbedFromUrl(url);
-    if (r) {
-      editor
-        .chain()
-        .focus()
-        .insertContent({ type: 'embed', attrs: { html: r.html, provider: r.provider } })
-        .run();
-    }
+  function addRawHtmlPrompt() {
+    setPromptConfig({
+      title: 'HTML',
+      description: 'Dán snippet HTML (iframe / table / widget).',
+      placeholder: '<iframe src="..." width="600" height="400"></iframe>',
+      multiline: true,
+      submitLabel: 'Chèn',
+      onSubmit: (raw) => {
+        const html = raw.trim();
+        if (!html) return false;
+        editor
+          .chain()
+          .focus()
+          .insertContent({ type: 'embed', attrs: { html, provider: 'raw' } })
+          .run();
+      },
+    });
   }
 
-  function addRawHtml() {
-    const html = window.prompt('Dán HTML thô (iframe / table / widget):');
-    if (!html) return;
-    editor
-      .chain()
-      .focus()
-      .insertContent({ type: 'embed', attrs: { html, provider: 'raw' } })
-      .run();
+  function addIframeEmbedPrompt() {
+    setPromptConfig({
+      title: 'Game / iFrame',
+      description:
+        'Dán URL hoặc <iframe> snippet.\n' +
+        'VD URL: https://poki.com/en/g/your-game\n' +
+        'VD snippet: <iframe src="..." width="800" height="600"></iframe>',
+      placeholder: 'https://... hoặc <iframe ...>',
+      multiline: true,
+      submitLabel: 'Chèn',
+      onSubmit: (raw) => {
+        const trimmed = raw.trim();
+        if (!trimmed) return false;
+        let html: string;
+        if (/<iframe[\s>]/i.test(trimmed)) {
+          html = trimmed;
+        } else if (/^https?:\/\//i.test(trimmed)) {
+          const escaped = trimmed.replace(/"/g, '&quot;');
+          html = `<div class="iframe-wrap" style="position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:8px;background:#000;"><iframe src="${escaped}" allowfullscreen allow="autoplay; fullscreen; gamepad; clipboard-write; encrypted-media" loading="lazy" referrerpolicy="no-referrer-when-downgrade" style="position:absolute;inset:0;width:100%;height:100%;border:0;"></iframe></div>`;
+        } else {
+          toast.error('Cần URL bắt đầu bằng http(s):// hoặc thẻ <iframe>…');
+          return false;
+        }
+        editor
+          .chain()
+          .focus()
+          .insertContent({ type: 'embed', attrs: { html, provider: 'iframe' } })
+          .run();
+      },
+    });
   }
 
-  function addYoutube() {
-    const url = window.prompt('YouTube URL:');
-    if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
+  function addYoutubePrompt() {
+    setPromptConfig({
+      title: 'Nhúng YouTube',
+      description: 'Dán URL video YouTube.',
+      placeholder: 'https://www.youtube.com/watch?v=...',
+      submitLabel: 'Chèn',
+      onSubmit: (raw) => {
+        const url = raw.trim();
+        if (!url) return false;
+        editor.chain().focus().setYoutubeVideo({ src: url }).run();
+      },
+    });
   }
 
-  function setLink() {
+  function setLinkPrompt() {
     const prev = editor.getAttributes('link').href as string | undefined;
-    const url = window.prompt('URL:', prev ?? 'https://');
-    if (url === null) return;
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    setPromptConfig({
+      title: editor.isActive('link') ? 'Sửa link' : 'Thêm link',
+      description: 'Để trống và bấm Lưu để gỡ link.',
+      placeholder: 'https://...',
+      initialValue: prev ?? 'https://',
+      submitLabel: 'Lưu',
+      onSubmit: (raw) => {
+        const url = raw.trim();
+        if (url === '' || url === 'https://') {
+          editor.chain().focus().extendMarkRange('link').unsetLink().run();
+        } else {
+          editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+        }
+      },
+    });
   }
 
   /* ------ active state derivations ------ */
@@ -578,7 +656,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       >
         <Code2 className="h-4 w-4" />
       </ToolBtn>
-      <ToolBtn title="Link" active={editor.isActive('link')} onClick={setLink}>
+      <ToolBtn title="Link" active={editor.isActive('link')} onClick={setLinkPrompt}>
         <LinkIcon className="h-4 w-4" />
       </ToolBtn>
 
@@ -869,58 +947,77 @@ function Toolbar({ editor }: { editor: Editor }) {
             <button
               type="button"
               onClick={() => {
-                pickImage();
+                onOpenLibrary('IMAGE');
                 close();
               }}
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
             >
-              <ImageIcon className="h-4 w-4" /> Ảnh (upload)
+              <FolderOpen className="h-4 w-4 shrink-0 text-primary" />
+              <span className="text-left">Ảnh từ thư viện</span>
             </button>
             <button
               type="button"
               onClick={() => {
-                pickVideo();
+                onOpenLibrary('VIDEO');
                 close();
               }}
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
             >
-              <VideoIcon className="h-4 w-4" /> Video (upload)
+              <FolderOpen className="h-4 w-4 shrink-0 text-primary" />
+              <span className="text-left">Video từ thư viện</span>
+            </button>
+            <div className="my-1 h-px bg-border" role="separator" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => {
+                addYoutubePrompt();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+            >
+              <YoutubeIcon className="h-4 w-4 shrink-0 text-primary" />
+              <span className="text-left">YouTube</span>
             </button>
             <button
               type="button"
               onClick={() => {
-                addYoutube();
+                addEmbedFromUrlPrompt();
                 close();
               }}
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
             >
-              <YoutubeIcon className="h-4 w-4" /> YouTube
+              <Globe className="h-4 w-4 shrink-0 text-primary" />
+              <span className="text-left">Embed URL (TikTok/FB/Spotify)</span>
             </button>
             <button
               type="button"
               onClick={() => {
-                addEmbedFromUrl();
+                addIframeEmbedPrompt();
                 close();
               }}
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
             >
-              <Globe className="h-4 w-4" /> Embed URL (TikTok/FB/Spotify)
+              <Gamepad2 className="h-4 w-4 shrink-0 text-primary" />
+              <span className="text-left">Game / iFrame</span>
             </button>
             <button
               type="button"
               onClick={() => {
-                addRawHtml();
+                addRawHtmlPrompt();
                 close();
               }}
               className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
             >
-              <CodeXml className="h-4 w-4" /> HTML thô
+              <CodeXml className="h-4 w-4 shrink-0 text-primary" />
+              <span className="text-left">HTML</span>
             </button>
           </>
         )}
       </ToolbarPopover>
 
       <span className="hidden lg:inline ml-auto text-[10px] text-muted-fg">{alignIcon}</span>
+
+      <PromptDialog config={promptConfig} onClose={() => setPromptConfig(null)} />
     </div>
   );
 }

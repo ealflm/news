@@ -1,4 +1,10 @@
-import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { PRISMA } from '../prisma/prisma.module';
 import type { PrismaClient, Media } from '@news/db';
@@ -184,8 +190,70 @@ export class MediaService {
     return { items: items.slice(0, query.limit), nextCursor };
   }
 
-  async delete(id: string): Promise<void> {
+  /**
+   * Collect every URL/path token belonging to a media record that may appear
+   * in posts (coverImageUrl or contentHtml). Used to detect "in-use" state.
+   */
+  private collectMediaTokens(m: Media): string[] {
+    const tokens = new Set<string>();
+    if (m.originalPath) tokens.add(m.originalPath);
+    if (m.variants && typeof m.variants === 'object') {
+      for (const v of Object.values(m.variants as Record<string, unknown>)) {
+        if (typeof v === 'string' && v.length > 8) tokens.add(v);
+      }
+    }
+    // Variants dir (for media with sharp variants) — referenced via /uploads/variants/<id>/...
+    tokens.add(`/uploads/variants/${m.id}/`);
+    return Array.from(tokens);
+  }
+
+  async findUsages(id: string): Promise<{
+    media: Media;
+    posts: {
+      id: string;
+      title: string;
+      slug: string;
+      status: string;
+      usedAs: 'cover' | 'content' | 'both';
+    }[];
+  }> {
     const m = await this.getById(id);
+    const tokens = this.collectMediaTokens(m);
+    if (tokens.length === 0) return { media: m, posts: [] };
+    const conditions = tokens.flatMap((t) => [
+      { coverImageUrl: { contains: t } },
+      { contentHtml: { contains: t } },
+    ]);
+    const rows = await this.prisma.post.findMany({
+      where: { OR: conditions as never },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        status: true,
+        coverImageUrl: true,
+        contentHtml: true,
+      },
+    });
+    const posts = rows.map((p) => {
+      const inCover = tokens.some((t) => p.coverImageUrl?.includes(t));
+      const inContent = tokens.some((t) => p.contentHtml.includes(t));
+      const usedAs: 'cover' | 'content' | 'both' =
+        inCover && inContent ? 'both' : inCover ? 'cover' : 'content';
+      return { id: p.id, title: p.title, slug: p.slug, status: p.status, usedAs };
+    });
+    return { media: m, posts };
+  }
+
+  async delete(id: string, opts: { force?: boolean } = {}): Promise<void> {
+    const { media: m, posts } = await this.findUsages(id);
+    if (posts.length > 0 && !opts.force) {
+      throw new ConflictException({
+        code: 'MEDIA_IN_USE',
+        message: `Media đang được dùng trong ${posts.length} bài viết. Truyền force=true để xóa và để lại ảnh hỏng.`,
+        usages: posts,
+      });
+    }
     if (m.originalPath) await this.storage.delete(m.originalPath);
     if (m.variants && typeof m.variants === 'object') {
       for (const v of Object.values(m.variants as Record<string, string>)) {

@@ -45,12 +45,10 @@ jobs:
       JWT_ACCESS_TTL: 15m
       JWT_REFRESH_TTL: 7d
       HMAC_CLICK_SECRET: ci_hmac_click_secret_min_32_chars_long_for_zod
-      ADMIN_INVITE_SECRET: ci_admin_invite_secret_min_32_chars_long_for_zod
       PUBLIC_BASE_URL: http://localhost:3000
       NEXT_PUBLIC_API_URL: http://localhost:4000
       UPLOADS_DIR: /tmp/uploads
       PUBLIC_UPLOADS_PREFIX: /uploads
-      SMTP_FROM: '"CI" <ci@local.test>'
 
     steps:
       - uses: actions/checkout@v4

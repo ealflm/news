@@ -37,7 +37,7 @@ export function PostActionBar({
 }: Props) {
   return (
     <div className="sticky top-0 z-30 -mx-4 -mt-4 sm:-mx-6 sm:-mt-6 lg:-mx-8 lg:-mt-8 mb-6 border-b border-border bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/80">
-      <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-wrap items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <Link
           href={'/admin/posts' as Route}
           className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-sm font-medium text-muted-fg hover:bg-muted hover:text-ink no-tap-highlight"
@@ -71,7 +71,7 @@ export function PostActionBar({
             size="sm"
           >
             <Save className="h-4 w-4" aria-hidden="true" />
-            Lưu nháp
+            {isPublished ? 'Lưu thay đổi' : 'Lưu nháp'}
           </Button>
           {onPublish && !isPublished && (
             <Button type="button" onClick={onPublish} loading={publishing ?? false} size="sm">

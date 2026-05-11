@@ -1,6 +1,6 @@
 export interface JwtAccessPayload {
-  sub: string;        // user id
-  email: string;
+  sub: string; // user id
+  username: string;
   type: 'access';
   iat?: number;
   exp?: number;
