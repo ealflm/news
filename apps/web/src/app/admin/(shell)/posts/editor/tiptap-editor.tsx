@@ -1,9 +1,51 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import { editorExtensions } from './tiptap-extensions';
+import { ToolbarPopover } from './toolbar-popover';
+import { EmojiPicker } from './emoji-picker';
 import { useEffect } from 'react';
 import type { MediaRecord } from '@news/shared';
+import {
+  Undo2,
+  Redo2,
+  Bold,
+  Italic,
+  Strikethrough,
+  Underline as UnderlineIcon,
+  Code,
+  Code2,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  Video as VideoIcon,
+  MonitorPlay as YoutubeIcon,
+  Smile,
+  Heading1,
+  Heading2,
+  Heading3,
+  Heading4,
+  Pilcrow,
+  List,
+  ListOrdered,
+  ListChecks,
+  Quote,
+  Minus,
+  Superscript as SuperscriptIcon,
+  Subscript as SubscriptIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  Highlighter,
+  Palette,
+  Type,
+  Plus,
+  Globe,
+  CodeXml,
+  ChevronDown,
+  RemoveFormatting,
+} from 'lucide-react';
+import { cn } from '@/lib/cn';
 
 interface Props {
   content: unknown;
@@ -11,6 +53,35 @@ interface Props {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+const FONT_SIZES = ['12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '40px'];
+const FONT_FAMILIES = [
+  { label: 'Mặc định', value: '' },
+  { label: 'Sans', value: 'system-ui, -apple-system, sans-serif' },
+  { label: 'Serif', value: 'Georgia, "Times New Roman", serif' },
+  { label: 'Mono', value: 'ui-monospace, SFMono-Regular, monospace' },
+];
+const TEXT_COLORS = [
+  '#0F172A',
+  '#E11D48',
+  '#2563EB',
+  '#16A34A',
+  '#F59E0B',
+  '#7C3AED',
+  '#0891B2',
+  '#64748B',
+  '#FFFFFF',
+];
+const HIGHLIGHT_COLORS = [
+  '#FEF08A',
+  '#FBCFE8',
+  '#BAE6FD',
+  '#BBF7D0',
+  '#FED7AA',
+  '#DDD6FE',
+  '#FECDD3',
+  '#E2E8F0',
+];
 
 async function uploadImage(file: File): Promise<string | null> {
   const fd = new FormData();
@@ -56,6 +127,42 @@ async function createEmbedFromUrl(url: string): Promise<{ html: string; provider
   return { html: v.html, provider: v.provider ?? '' };
 }
 
+/** Toolbar button: icon-based, supports active state */
+function ToolBtn({
+  active,
+  onClick,
+  title,
+  children,
+  disabled,
+}: {
+  active?: boolean;
+  onClick: () => void;
+  title: string;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      className={cn(
+        'flex h-8 w-8 items-center justify-center rounded-md text-ink transition-colors no-tap-highlight',
+        'disabled:opacity-40 disabled:cursor-not-allowed',
+        active ? 'bg-primary text-on-primary' : 'hover:bg-muted',
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Divider() {
+  return <div className="mx-0.5 h-6 w-px bg-border" />;
+}
+
 export function TiptapEditor({ content, onChange }: Props) {
   const editor = useEditor({
     extensions: editorExtensions,
@@ -67,7 +174,7 @@ export function TiptapEditor({ content, onChange }: Props) {
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm max-w-none min-h-[400px] rounded-md border border-border bg-surface p-4 text-ink focus:outline-none',
+          'prose prose-sm max-w-none min-h-[420px] rounded-b-md border border-t-0 border-border bg-surface px-4 py-3 text-ink focus:outline-none',
       },
       handleDrop: (view, event, _slice, moved) => {
         if (moved) return false;
@@ -141,7 +248,17 @@ export function TiptapEditor({ content, onChange }: Props) {
 
   if (!editor) return null;
 
-  async function pickAndInsertImage() {
+  return (
+    <div className="rounded-md">
+      <Toolbar editor={editor} />
+      <EditorContent editor={editor} />
+    </div>
+  );
+}
+
+function Toolbar({ editor }: { editor: Editor }) {
+  /* ------ helpers ------ */
+  async function pickImage() {
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = 'image/*';
@@ -149,105 +266,661 @@ export function TiptapEditor({ content, onChange }: Props) {
       const f = inp.files?.[0];
       if (!f) return;
       const url = await uploadImage(f);
-      if (url && editor) editor.chain().focus().setImage({ src: url }).run();
+      if (url) editor.chain().focus().setImage({ src: url }).run();
     };
     inp.click();
   }
 
-  const btn = (active: boolean, label: string, action: () => void) => (
-    <button
-      type="button"
-      onClick={action}
-      className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors no-tap-highlight ${
-        active
-          ? 'bg-primary border-primary text-on-primary'
-          : 'border-border bg-surface text-ink hover:bg-muted'
-      }`}
-    >
-      {label}
-    </button>
+  async function pickVideo() {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'video/*';
+    inp.onchange = async () => {
+      const f = inp.files?.[0];
+      if (!f) return;
+      const r = await uploadVideoFile(f);
+      if (r) {
+        editor
+          .chain()
+          .focus()
+          .insertContent({
+            type: 'video',
+            attrs: { src: r.src, ...(r.poster ? { poster: r.poster } : {}) },
+          })
+          .run();
+      }
+    };
+    inp.click();
+  }
+
+  async function addEmbedFromUrl() {
+    const url = window.prompt('Dán URL YouTube / TikTok / Facebook / Spotify:');
+    if (!url) return;
+    const r = await createEmbedFromUrl(url);
+    if (r) {
+      editor
+        .chain()
+        .focus()
+        .insertContent({ type: 'embed', attrs: { html: r.html, provider: r.provider } })
+        .run();
+    }
+  }
+
+  function addRawHtml() {
+    const html = window.prompt('Dán HTML thô (iframe / table / widget):');
+    if (!html) return;
+    editor
+      .chain()
+      .focus()
+      .insertContent({ type: 'embed', attrs: { html, provider: 'raw' } })
+      .run();
+  }
+
+  function addYoutube() {
+    const url = window.prompt('YouTube URL:');
+    if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
+  }
+
+  function setLink() {
+    const prev = editor.getAttributes('link').href as string | undefined;
+    const url = window.prompt('URL:', prev ?? 'https://');
+    if (url === null) return;
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  }
+
+  /* ------ active state derivations ------ */
+  const headingLevel =
+    [1, 2, 3, 4].find((lvl) => editor.isActive('heading', { level: lvl })) ?? null;
+  const headingLabel = headingLevel ? `H${headingLevel}` : 'P';
+  const headingIcon =
+    headingLevel === 1 ? (
+      <Heading1 className="h-4 w-4" />
+    ) : headingLevel === 2 ? (
+      <Heading2 className="h-4 w-4" />
+    ) : headingLevel === 3 ? (
+      <Heading3 className="h-4 w-4" />
+    ) : headingLevel === 4 ? (
+      <Heading4 className="h-4 w-4" />
+    ) : (
+      <Pilcrow className="h-4 w-4" />
+    );
+
+  const listActive =
+    editor.isActive('bulletList') || editor.isActive('orderedList') || editor.isActive('taskList');
+  const listIcon = editor.isActive('orderedList') ? (
+    <ListOrdered className="h-4 w-4" />
+  ) : editor.isActive('taskList') ? (
+    <ListChecks className="h-4 w-4" />
+  ) : (
+    <List className="h-4 w-4" />
   );
 
+  const alignIcon = editor.isActive({ textAlign: 'center' }) ? (
+    <AlignCenter className="h-4 w-4" />
+  ) : editor.isActive({ textAlign: 'right' }) ? (
+    <AlignRight className="h-4 w-4" />
+  ) : editor.isActive({ textAlign: 'justify' }) ? (
+    <AlignJustify className="h-4 w-4" />
+  ) : (
+    <AlignLeft className="h-4 w-4" />
+  );
+
+  const currentColor = (editor.getAttributes('textStyle').color as string) || '#0F172A';
+  const currentFontSize = (editor.getAttributes('textStyle').fontSize as string) || '';
+
   return (
-    <div>
-      <div className="mb-2 flex flex-wrap gap-1">
-        {btn(editor.isActive('bold'), 'B', () => editor.chain().focus().toggleBold().run())}
-        {btn(editor.isActive('italic'), 'I', () => editor.chain().focus().toggleItalic().run())}
-        {btn(editor.isActive('heading', { level: 2 }), 'H2', () =>
-          editor.chain().focus().toggleHeading({ level: 2 }).run(),
+    <div className="flex flex-wrap items-center gap-0.5 rounded-t-md border border-b-0 border-border bg-bg/60 px-2 py-1.5">
+      {/* Undo / Redo */}
+      <ToolBtn
+        title="Undo"
+        onClick={() => editor.chain().focus().undo().run()}
+        disabled={!editor.can().undo()}
+      >
+        <Undo2 className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Redo"
+        onClick={() => editor.chain().focus().redo().run()}
+        disabled={!editor.can().redo()}
+      >
+        <Redo2 className="h-4 w-4" />
+      </ToolBtn>
+
+      <Divider />
+
+      {/* Heading dropdown */}
+      <ToolbarPopover
+        trigger={(open) => (
+          <span
+            className={cn(
+              'flex h-8 items-center gap-0.5 rounded-md px-2 text-ink transition-colors no-tap-highlight',
+              headingLevel ? 'bg-primary text-on-primary' : 'hover:bg-muted',
+              open && 'bg-muted',
+            )}
+            title="Tiêu đề"
+          >
+            {headingIcon}
+            <ChevronDown className="h-3 w-3" />
+          </span>
         )}
-        {btn(editor.isActive('heading', { level: 3 }), 'H3', () =>
-          editor.chain().focus().toggleHeading({ level: 3 }).run(),
+      >
+        {(close) => (
+          <>
+            {[
+              { label: 'Đoạn văn', icon: <Pilcrow className="h-4 w-4" />, level: 0 },
+              { label: 'Heading 1', icon: <Heading1 className="h-4 w-4" />, level: 1 },
+              { label: 'Heading 2', icon: <Heading2 className="h-4 w-4" />, level: 2 },
+              { label: 'Heading 3', icon: <Heading3 className="h-4 w-4" />, level: 3 },
+              { label: 'Heading 4', icon: <Heading4 className="h-4 w-4" />, level: 4 },
+            ].map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={() => {
+                  if (item.level === 0) {
+                    editor.chain().focus().setParagraph().run();
+                  } else {
+                    editor
+                      .chain()
+                      .focus()
+                      .toggleHeading({ level: item.level as 1 | 2 | 3 | 4 })
+                      .run();
+                  }
+                  close();
+                }}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted',
+                  (item.level === 0 && !headingLevel) || headingLevel === item.level
+                    ? 'text-primary font-medium'
+                    : 'text-ink',
+                )}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+          </>
         )}
-        {btn(editor.isActive('bulletList'), '•', () =>
-          editor.chain().focus().toggleBulletList().run(),
+      </ToolbarPopover>
+
+      {/* List dropdown */}
+      <ToolbarPopover
+        trigger={(open) => (
+          <span
+            className={cn(
+              'flex h-8 items-center gap-0.5 rounded-md px-2 text-ink transition-colors no-tap-highlight',
+              listActive ? 'bg-primary text-on-primary' : 'hover:bg-muted',
+              open && 'bg-muted',
+            )}
+            title="Danh sách"
+          >
+            {listIcon}
+            <ChevronDown className="h-3 w-3" />
+          </span>
         )}
-        {btn(editor.isActive('orderedList'), '1.', () =>
-          editor.chain().focus().toggleOrderedList().run(),
+      >
+        {(close) => (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().toggleBulletList().run();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+            >
+              <List className="h-4 w-4" /> Bullet list
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().toggleOrderedList().run();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+            >
+              <ListOrdered className="h-4 w-4" /> Đánh số
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().toggleTaskList().run();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+            >
+              <ListChecks className="h-4 w-4" /> Task list
+            </button>
+          </>
         )}
-        {btn(editor.isActive('blockquote'), '"', () =>
-          editor.chain().focus().toggleBlockquote().run(),
+      </ToolbarPopover>
+
+      {/* Blockquote */}
+      <ToolBtn
+        title="Trích dẫn"
+        active={editor.isActive('blockquote')}
+        onClick={() => editor.chain().focus().toggleBlockquote().run()}
+      >
+        <Quote className="h-4 w-4" />
+      </ToolBtn>
+
+      {/* Emoji */}
+      <ToolbarPopover
+        trigger={(open) => (
+          <span
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-md text-ink transition-colors no-tap-highlight',
+              open ? 'bg-muted' : 'hover:bg-muted',
+            )}
+            title="Emoji"
+          >
+            <Smile className="h-4 w-4" />
+          </span>
         )}
-        {btn(false, 'Link', () => {
-          const url = window.prompt('URL?');
-          if (url) editor.chain().focus().setLink({ href: url }).run();
-        })}
-        {btn(false, 'Image', pickAndInsertImage)}
-        {btn(false, 'YouTube', () => {
-          const url = window.prompt('YouTube URL?');
-          if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
-        })}
-        {btn(false, 'Video', () => {
-          const inp = document.createElement('input');
-          inp.type = 'file';
-          inp.accept = 'video/*';
-          inp.onchange = async () => {
-            const f = inp.files?.[0];
-            if (!f) return;
-            const result = await uploadVideoFile(f);
-            if (result && editor) {
-              const node = editor.state.schema.nodes.video?.create({
-                src: result.src,
-                ...(result.poster ? { poster: result.poster } : {}),
-              });
-              if (node) {
-                editor.chain().focus().insertContent(node.toJSON()).run();
-              }
-            }
-          };
-          inp.click();
-        })}
-        {btn(false, 'Embed', async () => {
-          const url = window.prompt('Paste YouTube/TikTok/Facebook URL:');
-          if (!url) return;
-          const result = await createEmbedFromUrl(url);
-          if (result && editor) {
-            editor
-              .chain()
-              .focus()
-              .insertContent({
-                type: 'embed',
-                attrs: { html: result.html, provider: result.provider },
-              })
-              .run();
-          }
-        })}
-        {btn(false, 'HTML', () => {
-          const html = window.prompt('Dán HTML thô (iframe, table, blockquote...):');
-          if (!html || !editor) return;
-          editor
-            .chain()
-            .focus()
-            .insertContent({
-              type: 'embed',
-              attrs: { html, provider: 'raw' },
-            })
-            .run();
-        })}
-        {btn(false, 'Undo', () => editor.chain().focus().undo().run())}
-        {btn(false, 'Redo', () => editor.chain().focus().redo().run())}
-      </div>
-      <EditorContent editor={editor} />
+        contentClassName="p-0"
+      >
+        {(close) => (
+          <EmojiPicker
+            onPick={(e) => {
+              editor.chain().focus().insertContent(e).run();
+              close();
+            }}
+          />
+        )}
+      </ToolbarPopover>
+
+      <Divider />
+
+      {/* Inline marks */}
+      <ToolBtn
+        title="Bold"
+        active={editor.isActive('bold')}
+        onClick={() => editor.chain().focus().toggleBold().run()}
+      >
+        <Bold className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Italic"
+        active={editor.isActive('italic')}
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+      >
+        <Italic className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Strikethrough"
+        active={editor.isActive('strike')}
+        onClick={() => editor.chain().focus().toggleStrike().run()}
+      >
+        <Strikethrough className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Underline"
+        active={editor.isActive('underline')}
+        onClick={() => editor.chain().focus().toggleUnderline().run()}
+      >
+        <UnderlineIcon className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Inline code"
+        active={editor.isActive('code')}
+        onClick={() => editor.chain().focus().toggleCode().run()}
+      >
+        <Code className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Code block"
+        active={editor.isActive('codeBlock')}
+        onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+      >
+        <Code2 className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn title="Link" active={editor.isActive('link')} onClick={setLink}>
+        <LinkIcon className="h-4 w-4" />
+      </ToolBtn>
+
+      <Divider />
+
+      {/* Highlight color */}
+      <ToolbarPopover
+        trigger={(open) => (
+          <span
+            className={cn(
+              'flex h-8 w-8 items-center justify-center rounded-md text-ink transition-colors no-tap-highlight',
+              editor.isActive('highlight') ? 'bg-primary text-on-primary' : 'hover:bg-muted',
+              open && 'bg-muted',
+            )}
+            title="Highlight"
+          >
+            <Highlighter className="h-4 w-4" />
+          </span>
+        )}
+      >
+        {(close) => (
+          <>
+            <div className="grid grid-cols-4 gap-1 p-1">
+              {HIGHLIGHT_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    editor.chain().focus().toggleHighlight({ color: c }).run();
+                    close();
+                  }}
+                  className="h-7 w-7 rounded-sm border border-border hover:scale-110 transition-transform"
+                  style={{ background: c }}
+                  title={c}
+                  aria-label={`Highlight ${c}`}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().unsetHighlight().run();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs text-muted-fg hover:bg-muted"
+            >
+              <RemoveFormatting className="h-3.5 w-3.5" /> Bỏ highlight
+            </button>
+          </>
+        )}
+      </ToolbarPopover>
+
+      {/* Text color */}
+      <ToolbarPopover
+        trigger={(open) => (
+          <span
+            className={cn(
+              'relative flex h-8 w-8 items-center justify-center rounded-md text-ink transition-colors no-tap-highlight',
+              open ? 'bg-muted' : 'hover:bg-muted',
+            )}
+            title="Màu chữ"
+          >
+            <Palette className="h-4 w-4" />
+            <span
+              className="absolute bottom-1 left-1.5 right-1.5 h-0.5 rounded"
+              style={{ background: currentColor }}
+            />
+          </span>
+        )}
+      >
+        {(close) => (
+          <>
+            <div className="grid grid-cols-3 gap-1 p-1">
+              {TEXT_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    editor.chain().focus().setColor(c).run();
+                    close();
+                  }}
+                  className="flex h-8 items-center justify-center rounded-sm border border-border text-xs font-bold hover:scale-105 transition-transform"
+                  style={{ color: c, background: c === '#FFFFFF' ? '#F1F5F9' : 'transparent' }}
+                  title={c}
+                  aria-label={`Color ${c}`}
+                >
+                  A
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().unsetColor().run();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs text-muted-fg hover:bg-muted"
+            >
+              <RemoveFormatting className="h-3.5 w-3.5" /> Bỏ màu
+            </button>
+          </>
+        )}
+      </ToolbarPopover>
+
+      {/* Font size */}
+      <ToolbarPopover
+        trigger={(open) => (
+          <span
+            className={cn(
+              'flex h-8 items-center gap-0.5 rounded-md px-2 text-ink transition-colors no-tap-highlight',
+              open ? 'bg-muted' : 'hover:bg-muted',
+            )}
+            title="Kích cỡ chữ"
+          >
+            <Type className="h-4 w-4" />
+            <span className="text-[10px] font-medium tabular-nums">
+              {currentFontSize.replace('px', '') || 'auto'}
+            </span>
+            <ChevronDown className="h-3 w-3" />
+          </span>
+        )}
+      >
+        {(close) => (
+          <>
+            {FONT_SIZES.map((sz) => (
+              <button
+                key={sz}
+                type="button"
+                onClick={() => {
+                  (
+                    editor.chain().focus() as unknown as {
+                      setFontSize: (s: string) => { run: () => void };
+                    }
+                  )
+                    .setFontSize(sz)
+                    .run();
+                  close();
+                }}
+                className={cn(
+                  'flex w-full items-center justify-between rounded-sm px-2 py-1 text-sm hover:bg-muted',
+                  currentFontSize === sz ? 'text-primary font-medium' : 'text-ink',
+                )}
+              >
+                <span style={{ fontSize: sz }}>Aa</span>
+                <span className="text-xs text-muted-fg">{sz}</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                (editor.chain().focus() as unknown as { unsetFontSize: () => { run: () => void } })
+                  .unsetFontSize()
+                  .run();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs text-muted-fg hover:bg-muted"
+            >
+              <RemoveFormatting className="h-3.5 w-3.5" /> Mặc định
+            </button>
+          </>
+        )}
+      </ToolbarPopover>
+
+      {/* Font family */}
+      <ToolbarPopover
+        trigger={(open) => (
+          <span
+            className={cn(
+              'flex h-8 items-center gap-0.5 rounded-md px-2 text-ink transition-colors no-tap-highlight',
+              open ? 'bg-muted' : 'hover:bg-muted',
+            )}
+            title="Phông chữ"
+          >
+            <Globe className="h-4 w-4" />
+            <ChevronDown className="h-3 w-3" />
+          </span>
+        )}
+      >
+        {(close) => (
+          <>
+            {FONT_FAMILIES.map((f) => (
+              <button
+                key={f.label}
+                type="button"
+                onClick={() => {
+                  if (f.value) editor.chain().focus().setFontFamily(f.value).run();
+                  else editor.chain().focus().unsetFontFamily().run();
+                  close();
+                }}
+                className="flex w-full items-center rounded-sm px-2 py-1.5 text-sm hover:bg-muted text-ink"
+                style={f.value ? { fontFamily: f.value } : undefined}
+              >
+                {f.label}
+              </button>
+            ))}
+          </>
+        )}
+      </ToolbarPopover>
+
+      <Divider />
+
+      {/* Superscript / Subscript */}
+      <ToolBtn
+        title="Superscript"
+        active={editor.isActive('superscript')}
+        onClick={() => editor.chain().focus().toggleSuperscript().run()}
+      >
+        <SuperscriptIcon className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Subscript"
+        active={editor.isActive('subscript')}
+        onClick={() => editor.chain().focus().toggleSubscript().run()}
+      >
+        <SubscriptIcon className="h-4 w-4" />
+      </ToolBtn>
+
+      <Divider />
+
+      {/* Alignment */}
+      <ToolBtn
+        title="Căn trái"
+        active={editor.isActive({ textAlign: 'left' })}
+        onClick={() => editor.chain().focus().setTextAlign('left').run()}
+      >
+        <AlignLeft className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Căn giữa"
+        active={editor.isActive({ textAlign: 'center' })}
+        onClick={() => editor.chain().focus().setTextAlign('center').run()}
+      >
+        <AlignCenter className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Căn phải"
+        active={editor.isActive({ textAlign: 'right' })}
+        onClick={() => editor.chain().focus().setTextAlign('right').run()}
+      >
+        <AlignRight className="h-4 w-4" />
+      </ToolBtn>
+      <ToolBtn
+        title="Đều hai bên"
+        active={editor.isActive({ textAlign: 'justify' })}
+        onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+      >
+        <AlignJustify className="h-4 w-4" />
+      </ToolBtn>
+
+      <Divider />
+
+      {/* Clear formatting */}
+      <ToolBtn
+        title="Xóa định dạng"
+        onClick={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+      >
+        <RemoveFormatting className="h-4 w-4" />
+      </ToolBtn>
+
+      {/* HR */}
+      <ToolBtn
+        title="Đường kẻ ngang"
+        onClick={() => editor.chain().focus().setHorizontalRule().run()}
+      >
+        <Minus className="h-4 w-4" />
+      </ToolBtn>
+
+      <Divider />
+
+      {/* Add menu (image / video / youtube / embed / html) */}
+      <ToolbarPopover
+        align="end"
+        trigger={(open) => (
+          <span
+            className={cn(
+              'flex h-8 items-center gap-1 rounded-md bg-accent px-3 text-on-accent transition-colors no-tap-highlight hover:bg-accent/90',
+              open && 'bg-accent/90',
+            )}
+            title="Thêm media / embed"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="text-xs font-medium">Add</span>
+          </span>
+        )}
+      >
+        {(close) => (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                pickImage();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+            >
+              <ImageIcon className="h-4 w-4" /> Ảnh (upload)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                pickVideo();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+            >
+              <VideoIcon className="h-4 w-4" /> Video (upload)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                addYoutube();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+            >
+              <YoutubeIcon className="h-4 w-4" /> YouTube
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                addEmbedFromUrl();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+            >
+              <Globe className="h-4 w-4" /> Embed URL (TikTok/FB/Spotify)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                addRawHtml();
+                close();
+              }}
+              className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-muted"
+            >
+              <CodeXml className="h-4 w-4" /> HTML thô
+            </button>
+          </>
+        )}
+      </ToolbarPopover>
+
+      <span className="hidden lg:inline ml-auto text-[10px] text-muted-fg">{alignIcon}</span>
     </div>
   );
 }
