@@ -111,3 +111,86 @@ The popup engine implements aggressive dark-pattern affiliate behavior (cloaking
 - Operating multiple affiliate IDs and rotating
 - Monitoring affiliate dashboards for sudden drops
 - Having a `/chinh-sach` page that discloses affiliate relationships per Vietnamese Luật Quảng cáo
+
+## Continuous Integration
+
+CI runs on every push and PR via `.github/workflows/ci.yml`:
+
+- Lint + typecheck across all 4 packages
+- Unit tests (`@news/shared`, `@news/web`)
+- e2e tests (`@news/api`) against ephemeral Postgres + Redis containers
+- Production Next.js + NestJS builds
+- Docker image builds for web + api (cached via GHA cache)
+
+To run the same checks locally:
+
+```bash
+pnpm install
+pnpm typecheck
+pnpm test
+```
+
+## Build Summary
+
+This is the production state of the project.
+
+### Features delivered
+
+**Public site (Next.js 16 + Tailwind 4 + React 19):**
+
+- News-style homepage (featured hero + top sidebar + grid)
+- Post detail at `/yyyy/mm/dd/slug` with JSON-LD, OG meta, view tracking
+- Sitemap.xml, RSS feed, robots.txt
+- Affiliate disclosure page `/chinh-sach`
+- Mobile-first responsive, Newsreader + Roboto fonts, rose/blue palette
+
+**Affiliate popup engine:**
+
+- Multiple popups per post (global default + per-post ATTACH/DETACH)
+- Per-device variant URLs (iOS-FB / iOS-Safari / Android / Desktop fallback)
+- Cloaking flags (hide on desktop / hide on bot)
+- Force-click on close (configurable)
+- Base64-encoded JS runtime injected into public pages
+- HMAC-signed click tracking endpoint
+
+**Admin (`/admin`, JWT auth multi-user):**
+
+- Dashboard with shortcuts
+- Posts: TipTap editor (text, headings, lists, link, image upload, video upload, YouTube/TikTok/Facebook embed)
+- Media library (sharp image variants, ffmpeg video transcoding via BullMQ worker)
+- Popup CRUD with per-post override
+- Analytics dashboard (KPIs, area chart, top posts/popups, CSV export)
+- User management (invite via SMTP or copy URL)
+- Audit log (post mutations)
+
+**Stack:**
+
+- Next.js 16.2.6 (App Router, ISR)
+- NestJS 11.1.19
+- Prisma 7.8.0 + PostgreSQL 16 (driver adapter)
+- Tailwind CSS 4.3.0
+- React 19.2.6
+- Redis 7 (BullMQ + token revocation)
+
+**Quality:**
+
+- Test suite: shared (Zod), api e2e (auth/posts/media/popups), web (middleware/sitemap)
+- TypeScript strict mode across all 4 packages
+- Pre-commit hooks (Husky + lint-staged + prettier)
+- GitHub Actions CI (lint, typecheck, test, build, Docker validation)
+
+**Production deployment:**
+
+- Multi-stage Docker images for web + api
+- docker-compose.yml with nginx + postgres + redis + uploads volume
+- One-off `migrate` profile for first-time database setup
+- TLS-ready nginx config (commented HTTPS block)
+
+### Known limitations / future work
+
+- Token revocation uses in-memory Redis (no persistence across Redis restart unless RDB enabled)
+- ffmpeg video transcoding is single-threaded per worker; scale up by running multiple api-worker containers
+- Audit log records only Posts mutations; extend to Popups/Media/Users in follow-up
+- A/B test popup variants — schema supports `configVersion` but UI not built
+- Webhook notifications (Slack/Telegram on click thresholds) deferred
+- Bulk import from CSV/markdown deferred
