@@ -35,15 +35,17 @@ export class AnalyticsController {
           .digest('hex')
           .slice(0, 32)
       : null;
-    // fire-and-forget
-    void this.analytics.recordView({
-      postId: body.postId,
-      sessionId: body.sessionId ?? null,
-      ipHash,
-      device: body.device ?? null,
-      inFbApp: body.inFbApp ?? false,
-      referrer: body.referrer ?? null,
-    });
+    // fire-and-forget (recordView swallows errors internally, but catch defensively)
+    this.analytics
+      .recordView({
+        postId: body.postId,
+        sessionId: body.sessionId ?? null,
+        ipHash,
+        device: body.device ?? null,
+        inFbApp: body.inFbApp ?? false,
+        referrer: body.referrer ?? null,
+      })
+      .catch(() => {});
   }
 
   // ADMIN endpoints

@@ -14,24 +14,25 @@ export class AnalyticsService {
     inFbApp?: boolean;
     referrer?: string | null;
   }): Promise<void> {
-    // Avoid blocking; fire-and-forget at caller level
-    await this.prisma.viewEvent.create({
-      data: {
-        postId: args.postId,
-        sessionId: args.sessionId ?? null,
-        ipHash: args.ipHash ?? null,
-        device: args.device ?? null,
-        inFbApp: args.inFbApp ?? false,
-        referrer: args.referrer ?? null,
-      },
-    });
-    // Increment Post.viewCount denormalized cache
-    await this.prisma.post
-      .update({
+    // Best-effort: swallow errors (stale postId, FK violation, etc.)
+    try {
+      await this.prisma.viewEvent.create({
+        data: {
+          postId: args.postId,
+          sessionId: args.sessionId ?? null,
+          ipHash: args.ipHash ?? null,
+          device: args.device ?? null,
+          inFbApp: args.inFbApp ?? false,
+          referrer: args.referrer ?? null,
+        },
+      });
+      await this.prisma.post.update({
         where: { id: args.postId },
         data: { viewCount: { increment: 1 } },
-      })
-      .catch(() => {});
+      });
+    } catch {
+      // ignore (post deleted, FK violation, etc.)
+    }
   }
 
   /** Daily rollup — aggregate yesterday's events into PostStatDaily + PopupStatDaily. */
