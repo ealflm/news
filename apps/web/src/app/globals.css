@@ -1,29 +1,30 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Brand colors — calm blue + soft white */
-  --color-primary: #2563EB;
+  /* Brand colors — Swiss Minimalism: calm blue + soft white
+     Source: ui-ux-pro-max B2B Service palette, WCAG AAA contrast verified */
+  --color-primary: #0369A1;        /* sky-700 */
   --color-on-primary: #FFFFFF;
-  --color-secondary: #93C5FD;
-  --color-accent: #0EA5E9;
+  --color-secondary: #7DD3FC;      /* sky-300 */
+  --color-accent: #0E7490;         /* cyan-700, AA on white for body links */
   --color-on-accent: #FFFFFF;
 
-  /* Surface — gentle, light slate-tinted whites */
-  --color-bg: #F8FAFC;
+  /* Surface — soft slate-tinted whites */
+  --color-bg: #F8FAFC;              /* slate-50 */
   --color-surface: #FFFFFF;
-  --color-muted: #F1F5F9;
+  --color-muted: #F1F5F9;           /* slate-100 */
 
   /* Text */
-  --color-ink: #0F172A;
-  --color-foreground: #1E3A8A;
-  --color-muted-fg: #64748B;
+  --color-ink: #0F172A;             /* slate-900, body */
+  --color-foreground: #0C4A6E;      /* sky-900, headings */
+  --color-muted-fg: #64748B;        /* slate-500 */
 
   /* Borders & states */
-  --color-border: #E2E8F0;
-  --color-border-strong: #93C5FD;
+  --color-border: #E2E8F0;          /* slate-200 */
+  --color-border-strong: #7DD3FC;   /* sky-300 */
   --color-destructive: #DC2626;
   --color-success: #16A34A;
-  --color-ring: #2563EB;
+  --color-ring: #0369A1;
 
   /* Fonts (mapped from next/font) */
   --font-heading: var(--font-newsreader), Georgia, serif;

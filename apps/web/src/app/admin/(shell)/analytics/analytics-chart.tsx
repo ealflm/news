@@ -21,12 +21,12 @@ export function AnalyticsChart({ series }: Props) {
       <AreaChart data={series} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
         <defs>
           <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#2563EB" stopOpacity={0.3} />
-            <stop offset="100%" stopColor="#2563EB" stopOpacity={0} />
+            <stop offset="0%" stopColor="#0369A1" stopOpacity={0.28} />
+            <stop offset="100%" stopColor="#0369A1" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="clicksGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#0EA5E9" stopOpacity={0.3} />
-            <stop offset="100%" stopColor="#0EA5E9" stopOpacity={0} />
+            <stop offset="0%" stopColor="#0E7490" stopOpacity={0.28} />
+            <stop offset="100%" stopColor="#0E7490" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid stroke="#E2E8F0" strokeDasharray="3 3" vertical={false} />
@@ -44,13 +44,13 @@ export function AnalyticsChart({ series }: Props) {
             borderRadius: 8,
             fontSize: 12,
           }}
-          labelStyle={{ color: '#1E3A8A', fontWeight: 600 }}
+          labelStyle={{ color: '#0C4A6E', fontWeight: 600 }}
         />
         <Area
           type="monotone"
           dataKey="views"
           name="Views"
-          stroke="#2563EB"
+          stroke="#0369A1"
           fill="url(#viewsGrad)"
           strokeWidth={2}
           isAnimationActive={false}
@@ -59,7 +59,7 @@ export function AnalyticsChart({ series }: Props) {
           type="monotone"
           dataKey="clicks"
           name="Clicks"
-          stroke="#0EA5E9"
+          stroke="#0E7490"
           fill="url(#clicksGrad)"
           strokeWidth={2}
           isAnimationActive={false}
