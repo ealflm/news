@@ -245,6 +245,89 @@ export class AnalyticsService {
     };
   }
 
+  async getByDevice(from: Date, to: Date) {
+    const views = await this.prisma.viewEvent.groupBy({
+      by: ['device'],
+      where: { createdAt: { gte: from, lt: to }, device: { not: null } },
+      _count: { _all: true },
+    });
+    const clicks = await this.prisma.clickEvent.groupBy({
+      by: ['device'],
+      where: { createdAt: { gte: from, lt: to }, device: { not: null } },
+      _count: { _all: true },
+    });
+    const clickMap = new Map(clicks.map((c) => [c.device, c._count._all]));
+    return views.map((v) => ({
+      device: v.device ?? 'unknown',
+      views: v._count._all,
+      clicks: clickMap.get(v.device) ?? 0,
+    }));
+  }
+
+  async getByPlatformSimple(from: Date, to: Date) {
+    const popupClicks = await this.prisma.clickEvent.groupBy({
+      by: ['popupId'],
+      where: { createdAt: { gte: from, lt: to } },
+      _count: { _all: true },
+    });
+    const buckets: Record<string, number> = { SHOPEE: 0, TIKTOK: 0, LAZADA: 0, OTHER: 0 };
+    for (const pc of popupClicks) {
+      const links = await this.prisma.popupLink.findMany({
+        where: { popupId: pc.popupId },
+        select: { platform: true },
+      });
+      const primary = links[0]?.platform ?? 'OTHER';
+      const key = Object.keys(buckets).includes(primary) ? primary : 'OTHER';
+      buckets[key] = (buckets[key] ?? 0) + pc._count._all;
+    }
+    return Object.entries(buckets).map(([platform, clicks]) => ({ platform, clicks }));
+  }
+
+  async getClicksByHour(from: Date, to: Date) {
+    const rows = await this.prisma.$queryRaw<{ hour: number; clicks: bigint }[]>`
+      SELECT EXTRACT(HOUR FROM "createdAt")::int AS hour, COUNT(*)::bigint AS clicks
+      FROM "ClickEvent"
+      WHERE "createdAt" >= ${from} AND "createdAt" < ${to}
+      GROUP BY hour
+      ORDER BY hour
+    `;
+    const map = new Map(rows.map((r) => [r.hour, Number(r.clicks)]));
+    return Array.from({ length: 24 }, (_, h) => ({ hour: h, clicks: map.get(h) ?? 0 }));
+  }
+
+  async getFunnel(from: Date, to: Date) {
+    const views = await this.prisma.viewEvent.count({
+      where: { createdAt: { gte: from, lt: to } },
+    });
+    const clicks = await this.prisma.clickEvent.count({
+      where: { createdAt: { gte: from, lt: to } },
+    });
+    const eligible = await this.prisma.viewEvent.count({
+      where: {
+        createdAt: { gte: from, lt: to },
+        device: { in: ['ios', 'android'] },
+      },
+    });
+    return { views, eligible, clicks };
+  }
+
+  async getTopReferrers(from: Date, to: Date, limit = 10) {
+    const rows = await this.prisma.$queryRaw<{ referrer: string | null; views: bigint }[]>`
+      SELECT
+        CASE
+          WHEN "referrer" IS NULL OR "referrer" = '' THEN '(direct)'
+          ELSE regexp_replace("referrer", '^https?://([^/]+).*$', '\\1')
+        END AS referrer,
+        COUNT(*)::bigint AS views
+      FROM "ViewEvent"
+      WHERE "createdAt" >= ${from} AND "createdAt" < ${to}
+      GROUP BY referrer
+      ORDER BY views DESC
+      LIMIT ${limit}
+    `;
+    return rows.map((r) => ({ referrer: r.referrer ?? '(direct)', views: Number(r.views) }));
+  }
+
   /** Export per-post stats as CSV string. */
   async exportPostsCsv(daysWindow = 30): Promise<string> {
     const startCurrent = new Date(Date.now() - daysWindow * 24 * 3600 * 1000);

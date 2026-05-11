@@ -65,6 +65,65 @@ export class AnalyticsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('range')
+  async rangeOverview(
+    @Query('from') fromRaw?: string,
+    @Query('to') toRaw?: string,
+    @Query('granularity') granularity?: string,
+    @Query('device') device?: string,
+  ) {
+    const to = toRaw ? new Date(toRaw) : new Date();
+    const from = fromRaw ? new Date(fromRaw) : new Date(Date.now() - 7 * 86400_000);
+    const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86400_000));
+    return this.analytics.getOverview(days);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('by-device')
+  async byDevice(@Query('from') fromRaw?: string, @Query('to') toRaw?: string) {
+    const to = toRaw ? new Date(toRaw) : new Date();
+    const from = fromRaw ? new Date(fromRaw) : new Date(Date.now() - 7 * 86400_000);
+    return this.analytics.getByDevice(from, to);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('by-platform')
+  async byPlatform(@Query('from') fromRaw?: string, @Query('to') toRaw?: string) {
+    const to = toRaw ? new Date(toRaw) : new Date();
+    const from = fromRaw ? new Date(fromRaw) : new Date(Date.now() - 7 * 86400_000);
+    return this.analytics.getByPlatformSimple(from, to);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('by-hour')
+  async byHour(@Query('from') fromRaw?: string, @Query('to') toRaw?: string) {
+    const to = toRaw ? new Date(toRaw) : new Date();
+    const from = fromRaw ? new Date(fromRaw) : new Date(Date.now() - 7 * 86400_000);
+    return this.analytics.getClicksByHour(from, to);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('funnel')
+  async funnel(@Query('from') fromRaw?: string, @Query('to') toRaw?: string) {
+    const to = toRaw ? new Date(toRaw) : new Date();
+    const from = fromRaw ? new Date(fromRaw) : new Date(Date.now() - 7 * 86400_000);
+    return this.analytics.getFunnel(from, to);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('referrers')
+  async referrers(
+    @Query('from') fromRaw?: string,
+    @Query('to') toRaw?: string,
+    @Query('limit') limitRaw?: string,
+  ) {
+    const to = toRaw ? new Date(toRaw) : new Date();
+    const from = fromRaw ? new Date(fromRaw) : new Date(Date.now() - 7 * 86400_000);
+    const limit = Math.min(Math.max(parseInt(limitRaw ?? '10', 10) || 10, 1), 100);
+    return this.analytics.getTopReferrers(from, to, limit);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('export/posts.csv')
   async exportPostsCsv(@Query('window') windowRaw: string | undefined, @Res() res: Response) {
     const window = Math.min(Math.max(parseInt(windowRaw ?? '30', 10) || 30, 1), 365);
