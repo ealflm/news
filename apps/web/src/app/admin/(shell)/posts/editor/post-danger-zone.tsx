@@ -1,0 +1,50 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { AlertTriangle, Trash2 } from 'lucide-react';
+import type { Route } from 'next';
+
+interface Props {
+  postId: string;
+  postTitle: string;
+}
+
+export function PostDangerZone({ postId, postTitle }: Props) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+
+  async function del() {
+    if (!confirm(`Xác nhận xóa vĩnh viễn bài "${postTitle}"? Hành động này không thể hoàn tác.`))
+      return;
+    setBusy(true);
+    const r = await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
+    setBusy(false);
+    if (!r.ok) {
+      alert(`Xóa thất bại (${r.status})`);
+      return;
+    }
+    router.push('/admin/posts' as Route);
+  }
+
+  return (
+    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-destructive">
+        <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+        Vùng nguy hiểm
+      </div>
+      <p className="mb-3 text-xs text-muted-fg">
+        Xóa bài viết sẽ xóa cả lượt xem, click, và overrides liên quan. Không thể hoàn tác.
+      </p>
+      <button
+        type="button"
+        onClick={del}
+        disabled={busy}
+        className="inline-flex h-9 items-center gap-1.5 rounded-md border border-destructive/40 bg-surface px-3 text-sm font-medium text-destructive hover:bg-destructive hover:text-white disabled:opacity-50 transition-colors no-tap-highlight"
+      >
+        <Trash2 className="h-4 w-4" aria-hidden="true" />
+        {busy ? 'Đang xóa...' : 'Xóa bài viết'}
+      </button>
+    </div>
+  );
+}
