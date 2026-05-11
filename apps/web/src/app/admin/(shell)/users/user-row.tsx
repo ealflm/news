@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { KeyRound, Trash2 } from 'lucide-react';
 import type { UserListItem } from '@news/shared';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ChangePasswordDialog } from './change-password-dialog';
 
 interface Props {
@@ -16,10 +17,10 @@ export function UserRow({ user, isSelf }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function del() {
-    if (isSelf) return;
-    if (!confirm(`Xóa người dùng @${user.username}? Hành động này không thể hoàn tác.`)) return;
+    setConfirmOpen(false);
     setBusy(true);
     const r = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
     setBusy(false);
@@ -82,7 +83,7 @@ export function UserRow({ user, isSelf }: Props) {
           </button>
           <button
             type="button"
-            onClick={del}
+            onClick={() => !isSelf && setConfirmOpen(true)}
             disabled={busy || isSelf}
             aria-label={isSelf ? 'Không thể tự xóa tài khoản' : `Xóa @${user.username}`}
             title={isSelf ? 'Không thể tự xóa tài khoản' : 'Xóa người dùng'}
@@ -101,6 +102,17 @@ export function UserRow({ user, isSelf }: Props) {
           onDone={() => router.refresh()}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Xóa người dùng @${user.username}?`}
+        description="Hành động này không thể hoàn tác."
+        variant="danger"
+        confirmLabel="Xóa vĩnh viễn"
+        busy={busy}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => void del()}
+      />
     </>
   );
 }

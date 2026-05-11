@@ -82,7 +82,7 @@ function serializePopup(p: {
   isGlobal: boolean;
   enabled: boolean;
   cookieKey: string;
-  cookieDays: number;
+  cookieTtlMinutes: number;
   forceClickOnClose: boolean;
   hideOnDesktop: boolean;
   hideOnBot: boolean;
@@ -99,7 +99,7 @@ function serializePopup(p: {
     isGlobal: p.isGlobal,
     enabled: p.enabled,
     cookieKey: p.cookieKey,
-    cookieDays: p.cookieDays,
+    cookieTtlMinutes: p.cookieTtlMinutes,
     forceClickOnClose: p.forceClickOnClose,
     hideOnDesktop: p.hideOnDesktop,
     hideOnBot: p.hideOnBot,

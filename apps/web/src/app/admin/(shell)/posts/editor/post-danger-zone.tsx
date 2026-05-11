@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 import type { Route } from 'next';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface Props {
   postId: string;
@@ -14,10 +15,10 @@ interface Props {
 export function PostDangerZone({ postId, postTitle }: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   async function del() {
-    if (!confirm(`Xác nhận xóa vĩnh viễn bài "${postTitle}"? Hành động này không thể hoàn tác.`))
-      return;
+    setConfirmOpen(false);
     setBusy(true);
     const r = await fetch(`/api/posts/${postId}`, { method: 'DELETE' });
     setBusy(false);
@@ -40,13 +41,24 @@ export function PostDangerZone({ postId, postTitle }: Props) {
       </p>
       <button
         type="button"
-        onClick={del}
+        onClick={() => setConfirmOpen(true)}
         disabled={busy}
         className="inline-flex h-9 items-center gap-1.5 rounded-md border border-destructive/40 bg-surface px-3 text-sm font-medium text-destructive hover:bg-destructive hover:text-white disabled:opacity-50 transition-colors no-tap-highlight"
       >
         <Trash2 className="h-4 w-4" aria-hidden="true" />
         {busy ? 'Đang xóa...' : 'Xóa bài viết'}
       </button>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title={`Xóa bài "${postTitle}"?`}
+        description="Hành động này không thể hoàn tác. Toàn bộ lượt xem, click affiliate và overrides liên quan cũng sẽ bị xóa."
+        variant="danger"
+        confirmLabel="Xóa vĩnh viễn"
+        busy={busy}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => void del()}
+      />
     </div>
   );
 }

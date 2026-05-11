@@ -16,7 +16,7 @@ export class PopupsService {
         isGlobal: input.isGlobal ?? false,
         enabled: input.enabled ?? true,
         cookieKey: input.cookieKey,
-        cookieDays: input.cookieDays ?? 1,
+        cookieTtlMinutes: input.cookieTtlMinutes ?? 1440,
         forceClickOnClose: input.forceClickOnClose ?? false,
         hideOnDesktop: input.hideOnDesktop ?? true,
         hideOnBot: input.hideOnBot ?? true,
@@ -47,7 +47,7 @@ export class PopupsService {
     if (input.isGlobal !== undefined) data.isGlobal = input.isGlobal;
     if (input.enabled !== undefined) data.enabled = input.enabled;
     if (input.cookieKey !== undefined) data.cookieKey = input.cookieKey;
-    if (input.cookieDays !== undefined) data.cookieDays = input.cookieDays;
+    if (input.cookieTtlMinutes !== undefined) data.cookieTtlMinutes = input.cookieTtlMinutes;
     if (input.forceClickOnClose !== undefined) data.forceClickOnClose = input.forceClickOnClose;
     if (input.hideOnDesktop !== undefined) data.hideOnDesktop = input.hideOnDesktop;
     if (input.hideOnBot !== undefined) data.hideOnBot = input.hideOnBot;

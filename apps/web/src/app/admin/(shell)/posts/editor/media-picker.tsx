@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { MediaRecord, MediaListResponse } from '@news/shared';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { uploadMediaWithToast } from '@/components/ui/upload-toast';
 import { cn } from '@/lib/cn';
 
@@ -117,18 +118,9 @@ export function MediaPicker({ open, kind, onClose, onPick }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose, uploading]);
 
-  async function uploadAndInsert(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    if (kind === 'VIDEO') {
-      const ok = window.confirm(
-        'Khuyến nghị: nên upload video lên YouTube rồi nhúng vào bài (Add → YouTube). ' +
-          'Cách này tiết kiệm dung lượng ổ đĩa và bandwidth của server.\n\n' +
-          'Bạn vẫn muốn upload video trực tiếp lên server?',
-      );
-      if (!ok) return;
-    }
+  const [pendingVideoFile, setPendingVideoFile] = useState<File | null>(null);
+
+  async function doUpload(file: File) {
     setUploading(true);
     setUploadPercent(0);
     setError(null);
@@ -142,6 +134,17 @@ export function MediaPicker({ open, kind, onClose, onPick }: Props) {
     // Prepend so admin sees it at top, and select it.
     setItems((prev) => [res.media!, ...prev]);
     setSelectedId(res.media.id);
+  }
+
+  async function uploadAndInsert(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (kind === 'VIDEO') {
+      setPendingVideoFile(file);
+      return;
+    }
+    await doUpload(file);
   }
 
   function insertSelected() {
@@ -363,6 +366,24 @@ export function MediaPicker({ open, kind, onClose, onPick }: Props) {
           </div>
         </footer>
       </div>
+
+      <ConfirmDialog
+        open={pendingVideoFile !== null}
+        title="Upload video trực tiếp?"
+        description={
+          'Khuyến nghị: nên upload video lên YouTube rồi nhúng vào bài (Add → YouTube).\n\n' +
+          'Cách này tiết kiệm dung lượng ổ đĩa và bandwidth của server.'
+        }
+        confirmLabel="Vẫn upload"
+        cancelLabel="Hủy"
+        busy={uploading}
+        onCancel={() => setPendingVideoFile(null)}
+        onConfirm={async () => {
+          const f = pendingVideoFile;
+          setPendingVideoFile(null);
+          if (f) await doUpload(f);
+        }}
+      />
     </div>
   );
 }

@@ -19,6 +19,10 @@ const roboto = Roboto({
 export const metadata: Metadata = {
   title: 'News',
   description: 'News site',
+  icons: {
+    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    apple: [{ url: '/apple-icon.svg' }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

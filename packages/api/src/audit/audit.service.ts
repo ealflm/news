@@ -30,10 +30,30 @@ export class AuditService {
     }
   }
 
-  async list(opts: { limit: number; cursor?: string; actorId?: string; targetType?: string }) {
-    const where: { actorId?: string; targetType?: string } = {};
-    if (opts.actorId) where.actorId = opts.actorId;
+  async list(opts: {
+    limit: number;
+    cursor?: string;
+    actorId?: string;
+    actorUsername?: string;
+    action?: string;
+    targetType?: string;
+  }) {
+    // Resolve username → actorId (if provided, takes precedence over actorId).
+    let actorId = opts.actorId;
+    if (opts.actorUsername) {
+      const user = await this.prisma.user.findUnique({
+        where: { username: opts.actorUsername },
+        select: { id: true },
+      });
+      if (!user) return { items: [], nextCursor: null };
+      actorId = user.id;
+    }
+
+    const where: { actorId?: string; targetType?: string; action?: string } = {};
+    if (actorId) where.actorId = actorId;
     if (opts.targetType) where.targetType = opts.targetType;
+    if (opts.action) where.action = opts.action;
+
     const items = await this.prisma.auditLog.findMany({
       where,
       orderBy: { createdAt: 'desc' },

@@ -16,7 +16,7 @@ export interface AdminPopup {
   isGlobal: boolean;
   enabled: boolean;
   cookieKey: string;
-  cookieDays: number;
+  cookieTtlMinutes: number;
   forceClickOnClose: boolean;
   hideOnDesktop: boolean;
   hideOnBot: boolean;

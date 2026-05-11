@@ -96,7 +96,7 @@ model Popup {
   isGlobal          Boolean             @default(false)
   enabled           Boolean             @default(true)
   cookieKey         String              @unique
-  cookieDays        Int                 @default(1)
+  cookieTtlMinutes  Int                 @default(1440)
   forceClickOnClose Boolean             @default(false)
   hideOnDesktop     Boolean             @default(true)
   hideOnBot         Boolean             @default(true)

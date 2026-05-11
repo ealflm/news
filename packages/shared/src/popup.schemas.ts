@@ -28,7 +28,7 @@ export const CreatePopupInputSchema = z.object({
     .min(1)
     .max(64)
     .regex(/^[a-z0-9_]+$/),
-  cookieDays: z.number().int().min(1).max(365).optional(),
+  cookieTtlMinutes: z.number().int().min(1).max(525_600).optional(),
   forceClickOnClose: z.boolean().optional(),
   hideOnDesktop: z.boolean().optional(),
   hideOnBot: z.boolean().optional(),

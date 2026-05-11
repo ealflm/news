@@ -18,10 +18,20 @@ export async function listUsers(): Promise<UserListItem[]> {
 }
 
 export async function listAuditLog(
-  opts: { limit?: number } = {},
+  opts: {
+    limit?: number;
+    cursor?: string;
+    actorUsername?: string;
+    action?: string;
+    targetType?: string;
+  } = {},
 ): Promise<{ items: AuditLogItem[]; nextCursor: string | null }> {
   const params = new URLSearchParams();
   params.set('limit', String(opts.limit ?? 50));
+  if (opts.cursor) params.set('cursor', opts.cursor);
+  if (opts.actorUsername) params.set('actorUsername', opts.actorUsername);
+  if (opts.action) params.set('action', opts.action);
+  if (opts.targetType) params.set('targetType', opts.targetType);
   const r = await fetch(`${API_URL}/api/audit?${params}`, {
     headers: await authHeaders(),
     cache: 'no-store',

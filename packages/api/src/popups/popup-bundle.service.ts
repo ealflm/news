@@ -7,7 +7,7 @@ import { loadEnv } from '../config/env';
 interface RuntimePopupConfig {
   id: string;
   cookieKey: string;
-  cookieDays: number;
+  cookieTtlMinutes: number;
   delayMs: number;
   bannerUrl: string;
   flags: {
@@ -38,7 +38,7 @@ export class PopupBundleService {
       return {
         id: p.id,
         cookieKey: p.cookieKey,
-        cookieDays: p.cookieDays,
+        cookieTtlMinutes: p.cookieTtlMinutes,
         delayMs: p.delayMs,
         bannerUrl: p.bannerUrl,
         flags: {

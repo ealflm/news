@@ -12,6 +12,8 @@ export class AuditController {
     @Query('limit') limitRaw?: string,
     @Query('cursor') cursor?: string,
     @Query('actorId') actorId?: string,
+    @Query('actorUsername') actorUsername?: string,
+    @Query('action') action?: string,
     @Query('targetType') targetType?: string,
   ) {
     const limit = Math.min(Math.max(parseInt(limitRaw ?? '50', 10) || 50, 1), 200);
@@ -19,7 +21,9 @@ export class AuditController {
       limit,
       ...(cursor ? { cursor } : {}),
       ...(actorId ? { actorId } : {}),
-      ...(targetType ? { targetType } : {}),
+      ...(actorUsername ? { actorUsername: actorUsername.trim() } : {}),
+      ...(action ? { action: action.trim() } : {}),
+      ...(targetType ? { targetType: targetType.trim() } : {}),
     });
     return {
       items: result.items.map((i) => ({

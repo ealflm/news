@@ -222,15 +222,19 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
             <label htmlFor="post-title" className="sr-only">
               Tiêu đề bài viết
             </label>
-            <input
+            <textarea
               id="post-title"
-              type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => {
+                // Prevent Enter from inserting newline — title is a single sentence.
+                if (e.key === 'Enter') e.preventDefault();
+              }}
               placeholder="Tiêu đề bài viết..."
               required
               autoFocus={!initial}
-              className="w-full border-0 bg-transparent px-0 font-heading text-3xl font-bold text-foreground placeholder:text-muted-fg/60 focus:outline-none"
+              rows={1}
+              className="w-full resize-none overflow-hidden border-0 bg-transparent px-0 font-heading text-3xl font-bold leading-tight text-foreground placeholder:text-muted-fg/60 focus:outline-none field-sizing-content"
             />
           </div>
 

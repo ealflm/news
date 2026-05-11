@@ -17,6 +17,7 @@ import {
 import type { MediaListResponse, MediaRecord } from '@news/shared';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { uploadMediaWithToast } from '@/components/ui/upload-toast';
 import { cn } from '@/lib/cn';
 
@@ -158,15 +159,24 @@ export function MediaLibrary({ apiUrl }: Props) {
     return fetch(`/api/media/${id}${force ? '?force=true' : ''}`, { method: 'DELETE' });
   }
 
-  async function onDelete(id: string) {
+  const [pendingDelete, setPendingDelete] = useState<MediaRecord | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  function onDelete(id: string) {
     const m = items.find((x) => x.id === id);
     if (!m) return;
-    const label = m.kind === 'VIDEO' ? 'video' : 'ảnh';
-    if (!confirm(`Xóa ${label} này? Hành động không thể hoàn tác.`)) return;
+    setPendingDelete(m);
+  }
 
-    const res = await deleteRequest(id);
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    setDeleteBusy(true);
+    const res = await deleteRequest(pendingDelete.id);
+    setDeleteBusy(false);
     if (res.status === 204) {
-      setItems((prev) => prev.filter((x) => x.id !== id));
+      setItems((prev) => prev.filter((x) => x.id !== pendingDelete.id));
+      toast.success(`Đã xóa ${pendingDelete.kind === 'VIDEO' ? 'video' : 'ảnh'}`);
+      setPendingDelete(null);
       return;
     }
     if (res.status === 409) {
@@ -175,10 +185,12 @@ export function MediaLibrary({ apiUrl }: Props) {
         usages?: UsagePost[];
       } | null;
       const usages = body?.usages ?? [];
-      setBlocked({ media: m, posts: usages });
+      setBlocked({ media: pendingDelete, posts: usages });
+      setPendingDelete(null);
       return;
     }
     toast.error(`Xóa thất bại (${res.status})`);
+    setPendingDelete(null);
   }
 
   async function forceDelete() {
@@ -432,6 +444,17 @@ export function MediaLibrary({ apiUrl }: Props) {
           onForce={() => void forceDelete()}
         />
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title={`Xóa ${pendingDelete?.kind === 'VIDEO' ? 'video' : 'ảnh'} này?`}
+        description="Hành động này không thể hoàn tác. Nếu media đang được dùng trong bài viết, sẽ có cảnh báo riêng."
+        variant="danger"
+        confirmLabel="Xóa"
+        busy={deleteBusy}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => void confirmDelete()}
+      />
     </>
   );
 }

@@ -9,6 +9,7 @@ import { PromptDialog, type PromptConfig } from './prompt-dialog';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import type { MediaRecord } from '@news/shared';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { uploadMediaWithToast } from '@/components/ui/upload-toast';
 import {
   Undo2,
@@ -99,18 +100,6 @@ async function uploadImage(file: File): Promise<string | null> {
   return m.originalPath ? `${API_URL}${m.originalPath}` : null;
 }
 
-/**
- * Warn before self-hosting a video. YouTube embed is much cheaper for server storage + bandwidth.
- * Returns true if admin confirmed they still want to upload.
- */
-function confirmVideoUpload(): boolean {
-  return window.confirm(
-    'Khuyến nghị: nên upload video lên YouTube rồi nhúng vào bài (Add → YouTube). ' +
-      'Cách này tiết kiệm dung lượng ổ đĩa và bandwidth của server, đặc biệt khi nhiều người xem cùng lúc.\n\n' +
-      'Bạn vẫn muốn upload video trực tiếp lên server?',
-  );
-}
-
 async function uploadVideoFile(file: File): Promise<{ src: string; poster?: string } | null> {
   const res = await uploadMediaWithToast(file);
   if (!res.ok || !res.media) return null;
@@ -177,6 +166,8 @@ function Divider() {
 
 export function TiptapEditor({ content, onChange }: Props) {
   const [libraryKind, setLibraryKind] = useState<'IMAGE' | 'VIDEO' | null>(null);
+  const [pendingDropVideo, setPendingDropVideo] = useState<File | null>(null);
+  const [videoUploading, setVideoUploading] = useState(false);
   const editor = useEditor({
     extensions: editorExtensions,
     content: (content ?? { type: 'doc', content: [] }) as never,
@@ -211,20 +202,9 @@ export function TiptapEditor({ content, onChange }: Props) {
         }
         if (file.type.startsWith('video/')) {
           event.preventDefault();
-          if (!confirmVideoUpload()) return true;
-          void uploadVideoFile(file).then((result) => {
-            if (result) {
-              const { schema } = view.state;
-              const node = schema.nodes.video?.create({
-                src: result.src,
-                ...(result.poster ? { poster: result.poster } : {}),
-              });
-              if (node) {
-                const tr = view.state.tr.replaceSelectionWith(node);
-                view.dispatch(tr);
-              }
-            }
-          });
+          // Stage the file and open confirm modal (handled at component level
+          // because handleDrop must return synchronously).
+          setPendingDropVideo(file);
           return true;
         }
         return false;
@@ -279,6 +259,24 @@ export function TiptapEditor({ content, onChange }: Props) {
     setLibraryKind(null);
   }
 
+  async function confirmDropVideoUpload() {
+    if (!pendingDropVideo || !editor) return;
+    const file = pendingDropVideo;
+    setVideoUploading(true);
+    const result = await uploadVideoFile(file);
+    setVideoUploading(false);
+    setPendingDropVideo(null);
+    if (!result) return;
+    editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: 'video',
+        attrs: { src: result.src, ...(result.poster ? { poster: result.poster } : {}) },
+      })
+      .run();
+  }
+
   return (
     <div className="rounded-md">
       <Toolbar editor={editor} onOpenLibrary={(k) => setLibraryKind(k)} />
@@ -288,6 +286,19 @@ export function TiptapEditor({ content, onChange }: Props) {
         kind={libraryKind ?? 'IMAGE'}
         onClose={() => setLibraryKind(null)}
         onPick={handlePick}
+      />
+      <ConfirmDialog
+        open={pendingDropVideo !== null}
+        title="Upload video trực tiếp?"
+        description={
+          'Khuyến nghị: nên upload video lên YouTube rồi nhúng vào bài (Add → YouTube).\n\n' +
+          'Cách này tiết kiệm dung lượng ổ đĩa và bandwidth của server, đặc biệt khi nhiều người xem cùng lúc.'
+        }
+        confirmLabel="Vẫn upload"
+        cancelLabel="Hủy"
+        busy={videoUploading}
+        onCancel={() => setPendingDropVideo(null)}
+        onConfirm={() => void confirmDropVideoUpload()}
       />
     </div>
   );

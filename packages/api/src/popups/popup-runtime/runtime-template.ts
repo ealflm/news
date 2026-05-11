@@ -1,7 +1,7 @@
 export function buildRuntimeJs(configJson: string): string {
   return `(function(){
 var __cfg = ${configJson};
-function setCookie(n,v,d){var e=new Date();e.setTime(e.getTime()+d*864e5);document.cookie=n+"="+v+"; expires="+e.toUTCString()+"; path=/";}
+function setCookie(n,v,m){var e=new Date();e.setTime(e.getTime()+m*6e4);document.cookie=n+"="+v+"; expires="+e.toUTCString()+"; path=/";}
 function getCookie(n){var p=("; "+document.cookie).split("; "+n+"=");if(p.length===2)return p.pop().split(";").shift();}
 function isIOS(){return /iPhone|iPad|iPod/i.test(navigator.userAgent);}
 function isAndroid(){return /Android/i.test(navigator.userAgent);}
@@ -29,7 +29,7 @@ function show(p){
     if(clicked)return;clicked=true;
     overlay.parentNode&&overlay.parentNode.removeChild(overlay);
     document.body.style.overflow='';
-    setCookie(p.cookieKey,'1',p.cookieDays);
+    setCookie(p.cookieKey,'1',p.cookieTtlMinutes);
     try{navigator.sendBeacon&&navigator.sendBeacon(__cfg.clickEndpoint+'/'+p.token+'?t='+encodeURIComponent(trigger));}catch(e){}
     var link=pickLink(p.links);
     if(link){window.open(link,'_blank','noopener');}
@@ -39,7 +39,7 @@ function show(p){
     else{
       overlay.parentNode&&overlay.parentNode.removeChild(overlay);
       document.body.style.overflow='';
-      setCookie(p.cookieKey,'1',p.cookieDays);
+      setCookie(p.cookieKey,'1',p.cookieTtlMinutes);
     }
   }
   btn.onclick=function(){close('close');};
