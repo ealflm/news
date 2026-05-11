@@ -11,6 +11,7 @@ import { UsersModule } from './users/users.module';
 import { PostsModule } from './posts/posts.module';
 import { MediaModule } from './media/media.module';
 import { PopupsModule } from './popups/popups.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { PopupsModule } from './popups/popups.module';
     PostsModule,
     MediaModule,
     PopupsModule,
+    AnalyticsModule,
   ],
   controllers: [HealthController],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

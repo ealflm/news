@@ -1,0 +1,75 @@
+import { Body, Controller, Get, HttpCode, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { createHash } from 'node:crypto';
+import { AnalyticsService } from './analytics.service';
+import { JwtAuthGuard } from '../auth/guards/jwt.guard';
+import { loadEnv } from '../config/env';
+
+@Controller('analytics')
+export class AnalyticsController {
+  constructor(private readonly analytics: AnalyticsService) {}
+
+  // PUBLIC view ingestion — called by post detail page on render
+  @Post('view')
+  @HttpCode(204)
+  async recordView(
+    @Body()
+    body: {
+      postId: string;
+      device?: string;
+      inFbApp?: boolean;
+      referrer?: string;
+      sessionId?: string;
+    },
+    @Req() req: Request,
+  ) {
+    if (!body?.postId) return;
+    const env = loadEnv();
+    const salt = env.HMAC_CLICK_SECRET; // reuse for IP hashing
+    const forwarded = req.headers['x-forwarded-for'] as string | undefined;
+    const ip =
+      (forwarded ? forwarded.split(',')[0]?.trim() : undefined) ?? req.socket.remoteAddress ?? '';
+    const ipHash = ip
+      ? createHash('sha256')
+          .update(ip + salt)
+          .digest('hex')
+          .slice(0, 32)
+      : null;
+    // fire-and-forget
+    void this.analytics.recordView({
+      postId: body.postId,
+      sessionId: body.sessionId ?? null,
+      ipHash,
+      device: body.device ?? null,
+      inFbApp: body.inFbApp ?? false,
+      referrer: body.referrer ?? null,
+    });
+  }
+
+  // ADMIN endpoints
+  @UseGuards(JwtAuthGuard)
+  @Get('overview')
+  async overview(@Query('window') windowRaw?: string) {
+    const window = Math.min(Math.max(parseInt(windowRaw ?? '7', 10) || 7, 1), 90);
+    return this.analytics.getOverview(window);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('rollup')
+  @HttpCode(200)
+  async rollup(@Body() body: { day?: string }) {
+    const day = body?.day ? new Date(body.day) : undefined;
+    return this.analytics.runDailyRollup(day);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('export/posts.csv')
+  async exportPostsCsv(@Query('window') windowRaw: string | undefined, @Res() res: Response) {
+    const window = Math.min(Math.max(parseInt(windowRaw ?? '30', 10) || 30, 1), 365);
+    const csv = await this.analytics.exportPostsCsv(window);
+    res
+      .header('content-type', 'text/csv; charset=utf-8')
+      .header('content-disposition', `attachment; filename=posts-${window}d.csv`)
+      .send(csv);
+  }
+}

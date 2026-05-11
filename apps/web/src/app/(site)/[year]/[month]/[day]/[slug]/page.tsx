@@ -5,6 +5,7 @@ import type { Route } from 'next';
 import { Calendar, Eye, User } from 'lucide-react';
 import { getPublishedPostBySlug } from '@/lib/posts';
 import { getPopupBundleBase64 } from '@/lib/popups';
+import { ViewTracker } from '@/components/site/view-tracker';
 
 export const revalidate = 300;
 
@@ -121,6 +122,7 @@ export default async function PostPage({
       </article>
 
       {popupBase64 && <script async src={`data:text/javascript;base64,${popupBase64}`} />}
+      <ViewTracker postId={post.id} />
     </div>
   );
 }

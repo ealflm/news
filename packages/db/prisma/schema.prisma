@@ -41,6 +41,7 @@ model Post {
   ogImageUrl    String?
   viewCount      Int                 @default(0)
   popupOverrides PostPopupOverride[]
+  viewEvents     ViewEvent[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
@@ -143,4 +144,38 @@ model ClickEvent {
   createdAt DateTime @default(now())
   @@index([popupId, createdAt])
   @@index([postId, createdAt])
+}
+
+model ViewEvent {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  sessionId String?
+  ipHash    String?
+  device    String?
+  inFbApp   Boolean  @default(false)
+  referrer  String?
+  createdAt DateTime @default(now())
+  @@index([postId, createdAt])
+  @@index([createdAt])
+}
+
+model PostStatDaily {
+  id      String   @id @default(cuid())
+  postId  String
+  day     DateTime @db.Date
+  views   Int      @default(0)
+  clicks  Int      @default(0)
+  @@unique([postId, day])
+  @@index([day])
+}
+
+model PopupStatDaily {
+  id      String   @id @default(cuid())
+  popupId String
+  day     DateTime @db.Date
+  shown   Int      @default(0)
+  clicks  Int      @default(0)
+  @@unique([popupId, day])
+  @@index([day])
 }
