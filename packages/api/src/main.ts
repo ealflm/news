@@ -10,7 +10,13 @@ async function bootstrap() {
   const env = loadEnv();
   const app = await NestFactory.create(AppModule, { cors: false });
 
-  app.use(helmet());
+  app.use(
+    helmet({
+      // Allow uploads and embeds to be loaded by the web origin (localhost:3000 vs API :4000)
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
   app.use(cookieParser());
   app.enableCors({
     origin: env.PUBLIC_BASE_URL,
