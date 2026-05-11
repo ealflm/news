@@ -232,6 +232,18 @@ export function TiptapEditor({ content, onChange }: Props) {
               .run();
           }
         })}
+        {btn(false, 'HTML', () => {
+          const html = window.prompt('Dán HTML thô (iframe, table, blockquote...):');
+          if (!html || !editor) return;
+          editor
+            .chain()
+            .focus()
+            .insertContent({
+              type: 'embed',
+              attrs: { html, provider: 'raw' },
+            })
+            .run();
+        })}
         {btn(false, 'Undo', () => editor.chain().focus().undo().run())}
         {btn(false, 'Redo', () => editor.chain().focus().redo().run())}
       </div>
