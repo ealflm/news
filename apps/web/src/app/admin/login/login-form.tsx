@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { Mail, Lock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -28,35 +31,59 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <label className="block">
-        <span className="text-sm">Email</span>
-        <input
-          type="email"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="mt-1 w-full rounded border px-3 py-2"
-        />
-      </label>
-      <label className="block">
-        <span className="text-sm">Mật khẩu</span>
-        <input
-          type="password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 w-full rounded border px-3 py-2"
-        />
-      </label>
-      {error && <p className="text-sm text-red-600">{error}</p>}
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full rounded bg-black px-4 py-2 text-white disabled:opacity-50"
-      >
+    <form onSubmit={onSubmit} className="space-y-4" noValidate>
+      <div className="space-y-1.5">
+        <label htmlFor="email" className="block text-sm font-medium text-ink">
+          Email
+        </label>
+        <div className="relative">
+          <Mail
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-fg"
+            aria-hidden="true"
+          />
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="pl-10"
+            placeholder="ban@example.com"
+          />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label htmlFor="password" className="block text-sm font-medium text-ink">
+          Mật khẩu
+        </label>
+        <div className="relative">
+          <Lock
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-fg"
+            aria-hidden="true"
+          />
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+      {error && (
+        <div
+          role="alert"
+          className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+        >
+          {error}
+        </div>
+      )}
+      <Button type="submit" loading={loading} className="w-full" size="lg">
         {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-      </button>
+      </Button>
     </form>
   );
 }

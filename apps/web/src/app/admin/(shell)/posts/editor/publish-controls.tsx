@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 import type { AdminPost } from '@news/shared';
+import { Button } from '@/components/ui/button';
 
 export function PublishControls({ post }: { post: AdminPost }) {
   const router = useRouter();
@@ -25,34 +26,34 @@ export function PublishControls({ post }: { post: AdminPost }) {
   }
 
   return (
-    <div className="space-y-2 border-t pt-4">
-      <p className="text-sm">
-        Trạng thái: <span className="font-mono">{post.status}</span>
+    <div className="space-y-2 border-t border-border pt-4">
+      <p className="text-sm text-ink">
+        Trạng thái: <span className="font-mono text-foreground">{post.status}</span>
       </p>
       {post.status !== 'PUBLISHED' ? (
-        <button
+        <Button
+          variant="accent"
           onClick={() => callAction(`/api/posts/${post.id}/publish`)}
           disabled={busy}
-          className="w-full rounded border bg-green-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          loading={busy}
+          className="w-full"
         >
           Xuất bản
-        </button>
+        </Button>
       ) : (
-        <button
+        <Button
+          variant="secondary"
           onClick={() => callAction(`/api/posts/${post.id}/unpublish`)}
           disabled={busy}
-          className="w-full rounded border px-4 py-2 text-sm"
+          loading={busy}
+          className="w-full"
         >
           Bỏ xuất bản
-        </button>
+        </Button>
       )}
-      <button
-        onClick={deletePost}
-        disabled={busy}
-        className="w-full rounded border border-red-300 px-4 py-2 text-sm text-red-600"
-      >
+      <Button variant="danger" onClick={deletePost} disabled={busy} className="w-full">
         Xóa
-      </button>
+      </Button>
     </div>
   );
 }

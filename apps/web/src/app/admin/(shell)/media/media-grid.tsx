@@ -41,13 +41,13 @@ export function MediaGrid({ initial, apiUrl }: Props) {
 
   return (
     <div>
-      <label className="mb-4 inline-block cursor-pointer rounded bg-black px-4 py-2 text-sm text-white">
-        + Upload ảnh
+      <label className="mb-4 inline-flex cursor-pointer items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-on-primary transition-colors hover:bg-primary/90 no-tap-highlight">
+        Upload ảnh
         <input type="file" accept="image/*" className="hidden" onChange={onUpload} />
       </label>
 
       {items.length === 0 ? (
-        <p className="text-gray-500">Chưa có ảnh nào.</p>
+        <p className="text-muted-fg">Chưa có ảnh nào.</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
           {items.map((m) => {
@@ -63,19 +63,22 @@ export function MediaGrid({ initial, apiUrl }: Props) {
             const thumbPath = thumbKey ? variants[thumbKey] : null;
             const src = thumbPath ? `${apiUrl}${thumbPath}` : null;
             return (
-              <div key={m.id} className="group relative overflow-hidden rounded border bg-gray-50">
+              <div
+                key={m.id}
+                className="group relative overflow-hidden rounded-md border border-border bg-muted"
+              >
                 {src ? (
                   <img src={src} alt={m.alt ?? ''} className="aspect-square w-full object-cover" />
                 ) : (
-                  <div className="aspect-square bg-gray-200" />
+                  <div className="aspect-square bg-muted" />
                 )}
                 <button
                   onClick={() => onDelete(m.id)}
-                  className="absolute top-1 right-1 hidden rounded bg-red-600 px-2 py-0.5 text-xs text-white group-hover:block"
+                  className="absolute top-1 right-1 hidden rounded-md bg-destructive px-2 py-0.5 text-xs text-white group-hover:block no-tap-highlight"
                 >
                   Xóa
                 </button>
-                <div className="p-1 text-xs text-gray-500">
+                <div className="p-1 text-xs text-muted-fg">
                   {m.width}×{m.height}
                 </div>
               </div>

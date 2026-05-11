@@ -36,17 +36,21 @@ export function CoverImagePicker({ value, onChange }: Props) {
     <div>
       {value ? (
         <div className="mb-2">
-          <img src={value} alt="cover" className="w-full rounded border object-cover" />
+          <img
+            src={value}
+            alt="cover"
+            className="w-full rounded-md border border-border object-cover"
+          />
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="mt-1 text-xs text-red-600 underline"
+            className="mt-1 text-xs text-destructive underline no-tap-highlight"
           >
             Xóa ảnh cover
           </button>
         </div>
       ) : (
-        <label className="block cursor-pointer rounded border border-dashed bg-gray-50 px-3 py-6 text-center text-sm text-gray-500 hover:bg-gray-100">
+        <label className="block cursor-pointer rounded-md border border-dashed border-border bg-muted px-3 py-6 text-center text-sm text-muted-fg transition-colors hover:bg-muted/80 no-tap-highlight">
           {busy ? 'Đang upload...' : 'Click để upload ảnh cover'}
           <input
             type="file"

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 import type { AdminPopup, LinkPlatform, LinkDevice } from '@news/shared';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const PLATFORMS: LinkPlatform[] = ['SHOPEE', 'TIKTOK', 'LAZADA', 'OTHER'];
 const DEVICES: LinkDevice[] = ['IOS_FB', 'IOS_SAFARI', 'ANDROID', 'DESKTOP_FALLBACK'];
@@ -94,59 +96,48 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
     <div className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-medium">Tên</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded border px-3 py-2"
-          />
+          <label className="mb-1 block text-sm font-medium text-ink">Tên</label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Banner URL</label>
-          <input
+          <label className="mb-1 block text-sm font-medium text-ink">Banner URL</label>
+          <Input
             value={bannerUrl}
             onChange={(e) => setBannerUrl(e.target.value)}
             placeholder="https://..."
-            className="w-full rounded border px-3 py-2"
           />
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="mb-1 block text-sm font-medium">Delay (ms)</label>
-            <input
+            <label className="mb-1 block text-sm font-medium text-ink">Delay (ms)</label>
+            <Input
               type="number"
               value={delayMs}
               onChange={(e) => setDelayMs(Number(e.target.value))}
-              className="w-full rounded border px-3 py-2"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Cookie key</label>
-            <input
-              value={cookieKey}
-              onChange={(e) => setCookieKey(e.target.value)}
-              className="w-full rounded border px-3 py-2"
-            />
+            <label className="mb-1 block text-sm font-medium text-ink">Cookie key</label>
+            <Input value={cookieKey} onChange={(e) => setCookieKey(e.target.value)} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Cookie days</label>
-            <input
+            <label className="mb-1 block text-sm font-medium text-ink">Cookie days</label>
+            <Input
               type="number"
               value={cookieDays}
               onChange={(e) => setCookieDays(Number(e.target.value))}
-              className="w-full rounded border px-3 py-2"
             />
           </div>
         </div>
 
-        <fieldset className="rounded border p-3">
-          <legend className="text-sm font-medium">Affiliate links</legend>
+        <fieldset className="rounded-lg border border-border p-3">
+          <legend className="text-sm font-medium text-ink">Affiliate links</legend>
           {links.map((l, i) => (
             <div key={i} className="mb-2 grid grid-cols-12 gap-1">
               <select
                 value={l.platform}
                 onChange={(e) => updateLink(i, { platform: e.target.value as LinkPlatform })}
-                className="col-span-2 rounded border px-2 py-1 text-sm"
+                className="col-span-2 rounded-md border border-border bg-surface px-2 py-1 text-sm text-ink"
               >
                 {PLATFORMS.map((p) => (
                   <option key={p} value={p}>
@@ -157,7 +148,7 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
               <select
                 value={l.device}
                 onChange={(e) => updateLink(i, { device: e.target.value as LinkDevice })}
-                className="col-span-2 rounded border px-2 py-1 text-sm"
+                className="col-span-2 rounded-md border border-border bg-surface px-2 py-1 text-sm text-ink"
               >
                 {DEVICES.map((d) => (
                   <option key={d} value={d}>
@@ -169,29 +160,33 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
                 value={l.url}
                 onChange={(e) => updateLink(i, { url: e.target.value })}
                 placeholder="https://..."
-                className="col-span-7 rounded border px-2 py-1 text-sm"
+                className="col-span-7 rounded-md border border-border bg-surface px-2 py-1 text-sm text-ink placeholder:text-muted-fg"
               />
               <button
                 type="button"
                 onClick={() => removeLink(i)}
-                className="col-span-1 rounded border px-2 py-1 text-xs text-red-600"
+                className="col-span-1 rounded-md border border-border px-2 py-1 text-xs text-destructive hover:bg-muted no-tap-highlight"
               >
                 X
               </button>
             </div>
           ))}
-          <button type="button" onClick={addLink} className="text-sm text-blue-700 hover:underline">
+          <button
+            type="button"
+            onClick={addLink}
+            className="text-sm text-accent hover:underline no-tap-highlight"
+          >
             + Thêm link
           </button>
         </fieldset>
       </div>
 
       <aside className="space-y-3">
-        <label className="block text-sm">
+        <label className="block text-sm text-ink">
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />{' '}
           Bật popup
         </label>
-        <label className="block text-sm">
+        <label className="block text-sm text-ink">
           <input
             type="checkbox"
             checked={isGlobal}
@@ -199,9 +194,9 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
           />{' '}
           Áp dụng global (tất cả bài)
         </label>
-        <hr />
-        <p className="text-xs font-semibold text-gray-700">Chế độ ẩn / dark pattern</p>
-        <label className="block text-sm">
+        <hr className="border-border" />
+        <p className="text-xs font-semibold text-muted-fg">Chế độ ẩn / dark pattern</p>
+        <label className="block text-sm text-ink">
           <input
             type="checkbox"
             checked={hideOnDesktop}
@@ -209,7 +204,7 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
           />{' '}
           Ẩn trên desktop
         </label>
-        <label className="block text-sm">
+        <label className="block text-sm text-ink">
           <input
             type="checkbox"
             checked={hideOnBot}
@@ -217,7 +212,7 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
           />{' '}
           Ẩn với crawler/bot
         </label>
-        <label className="block text-sm">
+        <label className="block text-sm text-ink">
           <input
             type="checkbox"
             checked={forceClickOnClose}
@@ -225,25 +220,21 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
           />{' '}
           Click "X" cũng = click affiliate
         </label>
-        <hr />
-        <button
+        <hr className="border-border" />
+        <Button
           type="button"
           onClick={save}
+          loading={busy}
           disabled={busy || !name || !bannerUrl || !cookieKey}
-          className="w-full rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+          className="w-full"
         >
           {busy ? 'Đang lưu...' : initial ? 'Cập nhật' : 'Tạo popup'}
-        </button>
-        {err && <p className="text-sm text-red-600">{err}</p>}
+        </Button>
+        {err && <p className="text-sm text-destructive">{err}</p>}
         {initial && (
-          <button
-            type="button"
-            onClick={del}
-            disabled={busy}
-            className="w-full rounded border border-red-300 px-4 py-2 text-sm text-red-600"
-          >
+          <Button type="button" variant="danger" onClick={del} disabled={busy} className="w-full">
             Xóa popup
-          </button>
+          </Button>
         )}
       </aside>
     </div>

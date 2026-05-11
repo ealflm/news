@@ -37,7 +37,7 @@ export function TiptapEditor({ content, onChange }: Props) {
     editorProps: {
       attributes: {
         class:
-          'prose prose-sm max-w-none min-h-[400px] rounded border bg-white p-4 focus:outline-none',
+          'prose prose-sm max-w-none min-h-[400px] rounded-md border border-border bg-surface p-4 text-ink focus:outline-none',
       },
       handleDrop: (view, event, _slice, moved) => {
         if (moved) return false;
@@ -105,7 +105,11 @@ export function TiptapEditor({ content, onChange }: Props) {
     <button
       type="button"
       onClick={action}
-      className={`rounded border px-2 py-1 text-xs ${active ? 'bg-black text-white' : 'bg-white'}`}
+      className={`rounded-md border px-2 py-1 text-xs font-medium transition-colors no-tap-highlight ${
+        active
+          ? 'bg-primary border-primary text-on-primary'
+          : 'border-border bg-surface text-ink hover:bg-muted'
+      }`}
     >
       {label}
     </button>

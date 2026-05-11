@@ -1,5 +1,8 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import type { Route } from 'next';
+import { Calendar, Eye, User } from 'lucide-react';
 import { getPublishedPostBySlug } from '@/lib/posts';
 import { getPopupBundleBase64 } from '@/lib/popups';
 
@@ -29,7 +32,6 @@ export async function generateMetadata({
   if (description) og.description = description;
   if (ogImage) og.images = [ogImage];
   meta.openGraph = og;
-
   return meta;
 }
 
@@ -63,30 +65,62 @@ export default async function PostPage({
   const popupBase64 = await getPopupBundleBase64(post.id);
 
   return (
-    <main className="mx-auto max-w-3xl p-6">
+    <div className="bg-bg">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <article>
-        <h1 className="mb-4 text-4xl font-bold leading-tight">{post.title}</h1>
-        <p className="mb-6 text-sm text-gray-500">
-          ✍ {post.author.displayName} · 📅 {new Date(post.publishedAt).toLocaleDateString('vi-VN')}{' '}
-          · 👁 {post.viewCount}
-        </p>
+
+      <article className="mx-auto max-w-3xl px-4 py-8 sm:px-6 sm:py-12">
+        <nav aria-label="Breadcrumb" className="mb-6">
+          <Link href={'/' as Route} className="text-sm font-medium text-accent hover:underline">
+            ← Trang chủ
+          </Link>
+        </nav>
+
+        <header className="mb-8 border-b border-border pb-8">
+          <h1 className="font-heading text-3xl font-bold leading-tight text-foreground sm:text-4xl lg:text-5xl">
+            {post.title}
+          </h1>
+          {post.excerpt && (
+            <p className="mt-4 font-heading text-lg leading-relaxed text-muted-fg sm:text-xl">
+              {post.excerpt}
+            </p>
+          )}
+          <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-fg">
+            <span className="inline-flex items-center gap-1.5">
+              <User className="h-4 w-4" aria-hidden="true" />
+              {post.author.displayName}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Calendar className="h-4 w-4" aria-hidden="true" />
+              {new Date(post.publishedAt).toLocaleDateString('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+              })}
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Eye className="h-4 w-4" aria-hidden="true" />
+              {new Intl.NumberFormat('vi-VN').format(post.viewCount)} lượt xem
+            </span>
+          </div>
+        </header>
+
         {post.coverImageUrl && (
-          <img
-            src={post.coverImageUrl}
-            alt={post.title}
-            className="mb-6 w-full rounded-lg object-cover"
-          />
+          <figure className="mb-8 -mx-4 sm:mx-0">
+            <img
+              src={post.coverImageUrl}
+              alt={post.title}
+              className="aspect-[16/9] w-full object-cover sm:rounded-lg"
+            />
+          </figure>
         )}
-        <div
-          className="prose prose-lg max-w-none"
-          dangerouslySetInnerHTML={{ __html: post.contentHtml }}
-        />
+
+        <div className="prose-news" dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
       </article>
+
       {popupBase64 && <script async src={`data:text/javascript;base64,${popupBase64}`} />}
-    </main>
+    </div>
   );
 }

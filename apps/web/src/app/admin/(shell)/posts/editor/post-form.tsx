@@ -6,6 +6,9 @@ import type { Route } from 'next';
 import { TiptapEditor } from './tiptap-editor';
 import { PublishControls } from './publish-controls';
 import { CoverImagePicker } from './cover-image-picker';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import type { AdminPost, AdminPopup, OverrideAction } from '@news/shared';
 
 interface Props {
@@ -82,64 +85,62 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
   return (
     <div className="grid grid-cols-3 gap-6">
       <div className="col-span-2 space-y-4">
-        <input
+        <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Tiêu đề bài viết..."
-          className="w-full rounded border px-4 py-3 text-2xl font-semibold"
+          className="h-auto rounded-md border px-4 py-3 font-heading text-2xl font-semibold"
         />
-        <textarea
+        <Textarea
           value={excerpt ?? ''}
           onChange={(e) => setExcerpt(e.target.value)}
           placeholder="Tóm tắt..."
           rows={2}
-          className="w-full rounded border px-3 py-2 text-sm"
         />
         <TiptapEditor content={contentJson} onChange={setContentJson} />
       </div>
       <aside className="space-y-4">
         <div>
-          <label className="mb-1 block text-sm font-medium">Slug</label>
-          <input
+          <label className="mb-1 block text-sm font-medium text-ink">Slug</label>
+          <Input
             value={slug ?? ''}
             onChange={(e) => setSlug(e.target.value)}
             placeholder="auto-tạo từ tiêu đề"
-            className="w-full rounded border px-3 py-2 text-sm"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium">Ảnh cover</label>
+          <label className="mb-1 block text-sm font-medium text-ink">Ảnh cover</label>
           <CoverImagePicker
             value={coverImageUrl || null}
             onChange={(u) => setCoverImageUrl(u ?? '')}
           />
         </div>
         <details>
-          <summary className="cursor-pointer text-sm font-medium">SEO</summary>
+          <summary className="cursor-pointer text-sm font-medium text-ink">SEO</summary>
           <div className="mt-2 space-y-2">
-            <input
+            <Input
               value={seoTitle ?? ''}
               onChange={(e) => setSeoTitle(e.target.value)}
               placeholder="SEO title"
-              className="w-full rounded border px-3 py-2 text-sm"
             />
-            <textarea
+            <Textarea
               value={seoDesc ?? ''}
               onChange={(e) => setSeoDesc(e.target.value)}
               placeholder="SEO description"
               rows={3}
-              className="w-full rounded border px-3 py-2 text-sm"
             />
           </div>
         </details>
         {popups && popups.length > 0 && (
           <details>
-            <summary className="cursor-pointer text-sm font-medium">Popup overrides</summary>
+            <summary className="cursor-pointer text-sm font-medium text-ink">
+              Popup overrides
+            </summary>
             <div className="mt-2 space-y-1 text-xs">
               {popups.map((p) => (
                 <div key={p.id} className="flex items-center justify-between gap-2">
-                  <span className="truncate">
-                    {p.name} {p.isGlobal && <em className="text-gray-500">(global)</em>}
+                  <span className="truncate text-ink">
+                    {p.name} {p.isGlobal && <em className="text-muted-fg">(global)</em>}
                   </span>
                   <select
                     value={getAction(p.id) ?? ''}
@@ -147,7 +148,7 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
                       const v = e.target.value as '' | OverrideAction;
                       setAction(p.id, v === '' ? null : v);
                     }}
-                    className="rounded border px-1 py-0.5 text-xs"
+                    className="rounded-md border border-border bg-surface px-1 py-0.5 text-xs text-ink"
                   >
                     <option value="">Default</option>
                     <option value="ATTACH">Attach</option>
@@ -158,15 +159,16 @@ export function PostForm({ initial, popups, initialOverrides }: Props) {
             </div>
           </details>
         )}
-        <button
+        <Button
           type="button"
           onClick={save}
+          loading={saving}
           disabled={saving || !title}
-          className="w-full rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+          className="w-full"
         >
           {saving ? 'Đang lưu...' : initial ? 'Cập nhật' : 'Tạo bài'}
-        </button>
-        {err && <p className="text-sm text-red-600">{err}</p>}
+        </Button>
+        {err && <p className="text-sm text-destructive">{err}</p>}
         {initial && <PublishControls post={initial} />}
       </aside>
     </div>
