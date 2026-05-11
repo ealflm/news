@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Lint + Typecheck + Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: news
+          POSTGRES_PASSWORD: newsdev
+          POSTGRES_DB: news
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd="pg_isready -U news"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql://news:newsdev@localhost:5433/news?schema=public
+      REDIS_URL: redis://localhost:6380
+      JWT_ACCESS_SECRET: ci_access_secret_minimum_32_characters_long_for_zod
+      JWT_REFRESH_SECRET: ci_refresh_secret_minimum_32_characters_long_for_zod
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 7d
+      HMAC_CLICK_SECRET: ci_hmac_click_secret_min_32_chars_long_for_zod
+      ADMIN_INVITE_SECRET: ci_admin_invite_secret_min_32_chars_long_for_zod
+      PUBLIC_BASE_URL: http://localhost:3000
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      UPLOADS_DIR: /tmp/uploads
+      PUBLIC_UPLOADS_PREFIX: /uploads
+      SMTP_FROM: '"CI" <ci@local.test>'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Use Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: '0'
+
+      - name: Prepare uploads dir
+        run: mkdir -p /tmp/uploads/orig /tmp/uploads/variants
+
+      - name: Generate Prisma client
+        run: pnpm --filter @news/db exec prisma generate
+
+      - name: Apply migrations
+        run: pnpm --filter @news/db exec prisma migrate deploy
+
+      - name: Build @news/db
+        run: pnpm --filter @news/db build
+
+      - name: Build @news/shared
+        run: pnpm --filter @news/shared build
+
+      - name: Typecheck all packages
+        run: pnpm typecheck
+
+      - name: Run shared + web unit tests
+        run: |
+          pnpm --filter @news/shared test
+          pnpm --filter @news/web test
+
+      - name: Run API e2e tests
+        run: pnpm --filter @news/api test:e2e
+
+      - name: Build production bundles
+        run: |
+          pnpm --filter @news/api build
+          pnpm --filter @news/web build
+
+  docker-build:
+    name: Validate Docker Build
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate docker-compose config
+        run: |
+          cp .env.production.example .env.ci
+          # Patch with dummy values that pass length minimums
+          sed -i "s|GENERATE_STRONG_PASSWORD|ci_postgres_pw_long_enough|g" .env.ci
+          sed -i "s|GENERATE_RANDOM_32_CHARS_OR_MORE|$(openssl rand -hex 32)|g" .env.ci
+          docker compose --env-file .env.ci config > /dev/null
+
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          tags: news-web:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build api image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/api/Dockerfile
+          push: false
+          tags: news-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
