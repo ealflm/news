@@ -60,6 +60,7 @@ model Media {
   variants      Json?
   width         Int?
   height        Int?
+  durationSec   Int?
   sizeBytes     BigInt?
   mimeType      String?
   alt           String?

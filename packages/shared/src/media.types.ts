@@ -7,6 +7,7 @@ export interface MediaRecord {
   variants: ImageVariants | null;
   width: number | null;
   height: number | null;
+  durationSec: number | null;
   sizeBytes: number | null;
   mimeType: string | null;
   alt: string | null;

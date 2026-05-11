@@ -1,4 +1,6 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
   Delete,
   Get,
@@ -17,7 +19,7 @@ import type { Request } from 'express';
 import { MediaService } from './media.service';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { ZodValidationPipe } from '../auth/zod.pipe';
-import { imageUploadOptions } from './upload.config';
+import { uploadOptions } from './upload.config';
 import { ListMediaQuerySchema, type ListMediaQuery } from '@news/shared';
 
 @Controller('media')
@@ -27,10 +29,22 @@ export class MediaController {
   @UseGuards(JwtAuthGuard)
   @Post('upload')
   @HttpCode(201)
-  @UseInterceptors(FileInterceptor('file', imageUploadOptions as MulterOptions))
+  @UseInterceptors(FileInterceptor('file', uploadOptions as MulterOptions))
   async upload(@UploadedFile() file: Express.Multer.File, @Req() req: Request) {
     const user = req.user as { sub: string };
-    const m = await this.media.uploadImage(user.sub, file);
+    const m = await this.media.uploadFile(user.sub, file);
+    return { media: serializeMedia(m) };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('embed')
+  @HttpCode(201)
+  async createEmbed(@Body() body: { url: string }, @Req() req: Request) {
+    if (!body?.url) {
+      throw new BadRequestException('url required');
+    }
+    const user = req.user as { sub: string };
+    const m = await this.media.createEmbed(user.sub, body.url);
     return { media: serializeMedia(m) };
   }
 
@@ -66,6 +80,7 @@ function serializeMedia(m: {
   variants: unknown;
   width: number | null;
   height: number | null;
+  durationSec: number | null;
   sizeBytes: bigint | null;
   mimeType: string | null;
   alt: string | null;
@@ -78,6 +93,7 @@ function serializeMedia(m: {
     variants: m.variants,
     width: m.width,
     height: m.height,
+    durationSec: m.durationSec,
     sizeBytes: m.sizeBytes != null ? Number(m.sizeBytes) : null,
     mimeType: m.mimeType,
     alt: m.alt,

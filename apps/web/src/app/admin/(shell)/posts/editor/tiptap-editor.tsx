@@ -26,6 +26,36 @@ async function uploadImage(file: File): Promise<string | null> {
   return data.media.originalPath ? `${API_URL}${data.media.originalPath}` : null;
 }
 
+async function uploadVideoFile(file: File): Promise<{ src: string; poster?: string } | null> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch('/api/media', { method: 'POST', body: fd });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { media: MediaRecord };
+  const v = (data.media.variants ?? null) as Record<string, string> | null;
+  const src = v?.['720p']
+    ? `${API_URL}${v['720p']}`
+    : data.media.originalPath
+      ? `${API_URL}${data.media.originalPath}`
+      : null;
+  if (!src) return null;
+  const poster = v?.poster ? `${API_URL}${v.poster}` : undefined;
+  return poster ? { src, poster } : { src };
+}
+
+async function createEmbedFromUrl(url: string): Promise<{ html: string; provider: string } | null> {
+  const res = await fetch('/api/media/embed', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ url }),
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { media: MediaRecord };
+  const v = data.media.variants as { html?: string; provider?: string } | null;
+  if (!v?.html) return null;
+  return { html: v.html, provider: v.provider ?? '' };
+}
+
 export function TiptapEditor({ content, onChange }: Props) {
   const editor = useEditor({
     extensions: editorExtensions,
@@ -44,37 +74,60 @@ export function TiptapEditor({ content, onChange }: Props) {
         const dt = event.dataTransfer;
         if (!dt || dt.files.length === 0) return false;
         const file = dt.files[0];
-        if (!file || !file.type.startsWith('image/')) return false;
-        event.preventDefault();
-        void uploadImage(file).then((url) => {
-          if (url) {
-            const { schema } = view.state;
-            const node = schema.nodes.image?.create({ src: url });
-            if (node) {
-              const tr = view.state.tr.replaceSelectionWith(node);
-              view.dispatch(tr);
+        if (!file) return false;
+        if (file.type.startsWith('image/')) {
+          event.preventDefault();
+          void uploadImage(file).then((url) => {
+            if (url) {
+              const { schema } = view.state;
+              const node = schema.nodes.image?.create({ src: url });
+              if (node) {
+                const tr = view.state.tr.replaceSelectionWith(node);
+                view.dispatch(tr);
+              }
             }
-          }
-        });
-        return true;
+          });
+          return true;
+        }
+        if (file.type.startsWith('video/')) {
+          event.preventDefault();
+          void uploadVideoFile(file).then((result) => {
+            if (result) {
+              const { schema } = view.state;
+              const node = schema.nodes.video?.create({
+                src: result.src,
+                ...(result.poster ? { poster: result.poster } : {}),
+              });
+              if (node) {
+                const tr = view.state.tr.replaceSelectionWith(node);
+                view.dispatch(tr);
+              }
+            }
+          });
+          return true;
+        }
+        return false;
       },
       handlePaste: (view, event) => {
         const dt = event.clipboardData;
         if (!dt || dt.files.length === 0) return false;
         const file = dt.files[0];
-        if (!file || !file.type.startsWith('image/')) return false;
-        event.preventDefault();
-        void uploadImage(file).then((url) => {
-          if (url) {
-            const { schema } = view.state;
-            const node = schema.nodes.image?.create({ src: url });
-            if (node) {
-              const tr = view.state.tr.replaceSelectionWith(node);
-              view.dispatch(tr);
+        if (!file) return false;
+        if (file.type.startsWith('image/')) {
+          event.preventDefault();
+          void uploadImage(file).then((url) => {
+            if (url) {
+              const { schema } = view.state;
+              const node = schema.nodes.image?.create({ src: url });
+              if (node) {
+                const tr = view.state.tr.replaceSelectionWith(node);
+                view.dispatch(tr);
+              }
             }
-          }
-        });
-        return true;
+          });
+          return true;
+        }
+        return false;
       },
     },
   });
@@ -88,7 +141,7 @@ export function TiptapEditor({ content, onChange }: Props) {
 
   if (!editor) return null;
 
-  async function pickAndInsert() {
+  async function pickAndInsertImage() {
     const inp = document.createElement('input');
     inp.type = 'file';
     inp.accept = 'image/*';
@@ -139,10 +192,45 @@ export function TiptapEditor({ content, onChange }: Props) {
           const url = window.prompt('URL?');
           if (url) editor.chain().focus().setLink({ href: url }).run();
         })}
-        {btn(false, 'Image', pickAndInsert)}
+        {btn(false, 'Image', pickAndInsertImage)}
         {btn(false, 'YouTube', () => {
           const url = window.prompt('YouTube URL?');
           if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
+        })}
+        {btn(false, 'Video', () => {
+          const inp = document.createElement('input');
+          inp.type = 'file';
+          inp.accept = 'video/*';
+          inp.onchange = async () => {
+            const f = inp.files?.[0];
+            if (!f) return;
+            const result = await uploadVideoFile(f);
+            if (result && editor) {
+              const node = editor.state.schema.nodes.video?.create({
+                src: result.src,
+                ...(result.poster ? { poster: result.poster } : {}),
+              });
+              if (node) {
+                editor.chain().focus().insertContent(node.toJSON()).run();
+              }
+            }
+          };
+          inp.click();
+        })}
+        {btn(false, 'Embed', async () => {
+          const url = window.prompt('Paste YouTube/TikTok/Facebook URL:');
+          if (!url) return;
+          const result = await createEmbedFromUrl(url);
+          if (result && editor) {
+            editor
+              .chain()
+              .focus()
+              .insertContent({
+                type: 'embed',
+                attrs: { html: result.html, provider: result.provider },
+              })
+              .run();
+          }
         })}
         {btn(false, 'Undo', () => editor.chain().focus().undo().run())}
         {btn(false, 'Redo', () => editor.chain().focus().redo().run())}
