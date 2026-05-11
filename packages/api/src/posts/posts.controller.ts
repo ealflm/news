@@ -16,6 +16,7 @@ import type { Request } from 'express';
 import { PostsService } from './posts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 import { ZodValidationPipe } from '../auth/zod.pipe';
+import { AuditService } from '../audit/audit.service';
 import {
   CreatePostInputSchema,
   UpdatePostInputSchema,
@@ -27,7 +28,10 @@ import {
 
 @Controller('posts')
 export class PostsController {
-  constructor(private readonly posts: PostsService) {}
+  constructor(
+    private readonly posts: PostsService,
+    private readonly audit: AuditService,
+  ) {}
 
   // Public read
   @Get('published')
@@ -87,7 +91,15 @@ export class PostsController {
   @UsePipes(new ZodValidationPipe(CreatePostInputSchema))
   async create(@Body() body: CreatePostInput, @Req() req: Request) {
     const user = req.user as { sub: string };
-    return this.posts.create(user.sub, body);
+    const post = await this.posts.create(user.sub, body);
+    void this.audit.record({
+      actorId: user.sub,
+      action: 'post.create',
+      targetType: 'post',
+      targetId: post.id,
+      meta: { title: post.title, slug: post.slug },
+    });
+    return post;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -95,28 +107,63 @@ export class PostsController {
   async update(
     @Param('id') id: string,
     @Body(new ZodValidationPipe(UpdatePostInputSchema)) body: UpdatePostInput,
+    @Req() req: Request,
   ) {
-    return this.posts.update(id, body);
+    const user = req.user as { sub: string };
+    const post = await this.posts.update(id, body);
+    void this.audit.record({
+      actorId: user.sub,
+      action: 'post.update',
+      targetType: 'post',
+      targetId: id,
+      meta: { title: post.title },
+    });
+    return post;
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/publish')
   @HttpCode(200)
-  async publish(@Param('id') id: string) {
-    return this.posts.publish(id);
+  async publish(@Param('id') id: string, @Req() req: Request) {
+    const user = req.user as { sub: string };
+    const post = await this.posts.publish(id);
+    void this.audit.record({
+      actorId: user.sub,
+      action: 'post.publish',
+      targetType: 'post',
+      targetId: id,
+      meta: { title: post.title },
+    });
+    return post;
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/unpublish')
   @HttpCode(200)
-  async unpublish(@Param('id') id: string) {
-    return this.posts.unpublish(id);
+  async unpublish(@Param('id') id: string, @Req() req: Request) {
+    const user = req.user as { sub: string };
+    const post = await this.posts.unpublish(id);
+    void this.audit.record({
+      actorId: user.sub,
+      action: 'post.unpublish',
+      targetType: 'post',
+      targetId: id,
+      meta: { title: post.title },
+    });
+    return post;
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   @HttpCode(204)
-  async delete(@Param('id') id: string) {
+  async delete(@Param('id') id: string, @Req() req: Request) {
+    const user = req.user as { sub: string };
+    void this.audit.record({
+      actorId: user.sub,
+      action: 'post.delete',
+      targetType: 'post',
+      targetId: id,
+    });
     return this.posts.delete(id);
   }
 }

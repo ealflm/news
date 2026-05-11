@@ -7,14 +7,43 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String       @id @default(cuid())
+  email        String       @unique
   passwordHash String
   displayName  String
   posts        Post[]
   media        Media[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  invites      UserInvite[] @relation("InvitedBy")
+  auditLogs    AuditLog[]   @relation("AuditActor")
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model UserInvite {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  invitedById String
+  invitedBy   User      @relation("InvitedBy", fields: [invitedById], references: [id])
+  tokenHash   String    @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id])
+  action     String
+  targetType String
+  targetId   String?
+  meta       Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId, createdAt])
+  @@index([createdAt])
 }
 
 enum PostStatus {

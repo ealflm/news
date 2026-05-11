@@ -12,6 +12,7 @@ import { PostsModule } from './posts/posts.module';
 import { MediaModule } from './media/media.module';
 import { PopupsModule } from './popups/popups.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
       ],
     }),
     PrismaModule,
+    AuditModule,
     UsersModule,
     AuthModule,
     PostsModule,

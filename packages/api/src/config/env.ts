@@ -13,6 +13,12 @@ const EnvSchema = z.object({
   UPLOADS_DIR: z.string().default('/home/ealflm/dev/news/uploads'),
   PUBLIC_UPLOADS_PREFIX: z.string().default('/uploads'),
   HMAC_CLICK_SECRET: z.string().min(32),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('"News Admin" <noreply@local.test>'),
+  ADMIN_INVITE_SECRET: z.string().min(32).default('change_me_dev_only_invite_secret_32_chars_min'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

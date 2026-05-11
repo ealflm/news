@@ -7,3 +7,4 @@ export * from './media.types';
 export * from './popup.schemas';
 export * from './popup.types';
 export * from './analytics.types';
+export * from './users.schemas';

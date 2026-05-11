@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
+import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { loadEnv } from '../config/env';
@@ -21,21 +22,34 @@ export class AuthService {
     return user;
   }
 
-  signAccessToken(user: User): string {
+  signAccessToken(user: User): { token: string; jti: string } {
     const env = loadEnv();
-    const payload: JwtAccessPayload = { sub: user.id, email: user.email, type: 'access' };
-    return this.jwt.sign(payload, {
+    const jti = randomUUID();
+    const payload: JwtAccessPayload & { jti: string } = {
+      sub: user.id,
+      email: user.email,
+      type: 'access',
+      jti,
+    };
+    const token = this.jwt.sign(payload, {
       secret: env.JWT_ACCESS_SECRET,
       expiresIn: env.JWT_ACCESS_TTL,
     } as JwtSignOptions);
+    return { token, jti };
   }
 
-  signRefreshToken(user: User): string {
+  signRefreshToken(user: User): { token: string; jti: string } {
     const env = loadEnv();
-    const payload: JwtRefreshPayload = { sub: user.id, type: 'refresh' };
-    return this.jwt.sign(payload, {
+    const jti = randomUUID();
+    const payload: JwtRefreshPayload & { jti: string } = {
+      sub: user.id,
+      type: 'refresh',
+      jti,
+    };
+    const token = this.jwt.sign(payload, {
       secret: env.JWT_REFRESH_SECRET,
       expiresIn: env.JWT_REFRESH_TTL,
     } as JwtSignOptions);
+    return { token, jti };
   }
 }

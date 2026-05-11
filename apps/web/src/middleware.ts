@@ -6,6 +6,7 @@ export async function middleware(req: NextRequest) {
 
   if (!pathname.startsWith('/admin')) return NextResponse.next();
   if (pathname.startsWith('/admin/login')) return NextResponse.next();
+  if (pathname.startsWith('/admin/accept-invite')) return NextResponse.next();
 
   const token = req.cookies.get('access_token')?.value;
   if (!token) return NextResponse.redirect(new URL('/admin/login', req.url));

@@ -6,10 +6,12 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
 import { JwtRefreshStrategy } from './jwt-refresh.strategy';
 import { UsersModule } from '../users/users.module';
+import { TokenRevocationService } from './token-revocation.service';
 
 @Module({
   imports: [PassportModule, JwtModule.register({}), UsersModule],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
+  providers: [AuthService, JwtStrategy, JwtRefreshStrategy, TokenRevocationService],
+  exports: [TokenRevocationService],
 })
 export class AuthModule {}

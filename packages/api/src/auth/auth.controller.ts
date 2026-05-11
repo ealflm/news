@@ -9,12 +9,15 @@ import {
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { ZodValidationPipe } from './zod.pipe';
 import type { Request, Response, CookieOptions } from 'express';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { JwtAuthGuard, JwtRefreshGuard } from './guards/jwt.guard';
 import { LoginInputSchema, type LoginInput } from '@news/shared';
+import { loadEnv } from '../config/env';
+import { TokenRevocationService } from './token-revocation.service';
 
 const baseCookie: CookieOptions = {
   httpOnly: true,
@@ -22,7 +25,6 @@ const baseCookie: CookieOptions = {
   secure: process.env.NODE_ENV === 'production',
   path: '/',
 };
-
 const ACCESS_MS = 15 * 60 * 1000;
 const REFRESH_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -31,6 +33,8 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly users: UsersService,
+    private readonly jwt: JwtService,
+    private readonly revocation: TokenRevocationService,
   ) {}
 
   @Post('login')
@@ -41,8 +45,8 @@ export class AuthController {
     const access = this.auth.signAccessToken(user);
     const refresh = this.auth.signRefreshToken(user);
 
-    res.cookie('access_token', access, { ...baseCookie, maxAge: ACCESS_MS });
-    res.cookie('refresh_token', refresh, { ...baseCookie, maxAge: REFRESH_MS });
+    res.cookie('access_token', access.token, { ...baseCookie, maxAge: ACCESS_MS });
+    res.cookie('refresh_token', refresh.token, { ...baseCookie, maxAge: REFRESH_MS });
 
     return { user: { id: user.id, email: user.email, displayName: user.displayName } };
   }
@@ -59,16 +63,45 @@ export class AuthController {
   @HttpCode(200)
   @UseGuards(JwtRefreshGuard)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const payload = req.user as { sub: string };
+    const payload = req.user as { sub: string; jti?: string; exp?: number };
     const user = await this.users.findByIdOrThrow(payload.sub);
+    // Revoke old refresh token jti
+    if (payload.jti && payload.exp) {
+      const ttl = payload.exp - Math.floor(Date.now() / 1000);
+      if (ttl > 0) {
+        await this.revocation.revoke(payload.jti, ttl);
+      }
+    }
     const access = this.auth.signAccessToken(user);
-    res.cookie('access_token', access, { ...baseCookie, maxAge: ACCESS_MS });
+    const refresh = this.auth.signRefreshToken(user);
+    res.cookie('access_token', access.token, { ...baseCookie, maxAge: ACCESS_MS });
+    res.cookie('refresh_token', refresh.token, { ...baseCookie, maxAge: REFRESH_MS });
     return { ok: true };
   }
 
   @Post('logout')
   @HttpCode(204)
-  async logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const env = loadEnv();
+    const accessToken = req.cookies?.access_token as string | undefined;
+    const refreshToken = req.cookies?.refresh_token as string | undefined;
+    for (const [secret, token] of [
+      [env.JWT_ACCESS_SECRET, accessToken],
+      [env.JWT_REFRESH_SECRET, refreshToken],
+    ] as [string, string | undefined][]) {
+      if (!token) continue;
+      try {
+        const decoded = this.jwt.verify<{ jti?: string; exp?: number }>(token, { secret });
+        if (decoded.jti && decoded.exp) {
+          const ttl = decoded.exp - Math.floor(Date.now() / 1000);
+          if (ttl > 0) {
+            await this.revocation.revoke(decoded.jti, ttl);
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
     res.clearCookie('access_token', { ...baseCookie });
     res.clearCookie('refresh_token', { ...baseCookie });
   }
