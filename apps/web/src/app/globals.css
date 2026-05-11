@@ -1,29 +1,29 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Brand colors */
-  --color-primary: #E11D48;
+  /* Brand colors — calm blue + soft white */
+  --color-primary: #2563EB;
   --color-on-primary: #FFFFFF;
-  --color-secondary: #FB7185;
-  --color-accent: #2563EB;
+  --color-secondary: #93C5FD;
+  --color-accent: #0EA5E9;
   --color-on-accent: #FFFFFF;
 
-  /* Surface */
-  --color-bg: #FFF1F2;
+  /* Surface — gentle, light slate-tinted whites */
+  --color-bg: #F8FAFC;
   --color-surface: #FFFFFF;
-  --color-muted: #F8F4F5;
+  --color-muted: #F1F5F9;
 
   /* Text */
   --color-ink: #0F172A;
-  --color-foreground: #881337;
+  --color-foreground: #1E3A8A;
   --color-muted-fg: #64748B;
 
   /* Borders & states */
-  --color-border: #FECDD3;
-  --color-border-strong: #FB7185;
+  --color-border: #E2E8F0;
+  --color-border-strong: #93C5FD;
   --color-destructive: #DC2626;
   --color-success: #16A34A;
-  --color-ring: #E11D48;
+  --color-ring: #2563EB;
 
   /* Fonts (mapped from next/font) */
   --font-heading: var(--font-newsreader), Georgia, serif;
