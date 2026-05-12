@@ -18,7 +18,7 @@ function parseSetCookies(headers: Headers): Array<{ name: string; value: string 
   return out;
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (!pathname.startsWith('/admin')) return NextResponse.next();

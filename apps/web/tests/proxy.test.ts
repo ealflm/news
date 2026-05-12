@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { NextRequest } from 'next/server';
-import { middleware } from '../src/middleware';
+import { proxy } from '../src/proxy';
 
 vi.mock('../src/lib/auth', () => ({
   verifyAccessToken: async (token: string) =>
@@ -14,31 +14,31 @@ function makeReq(path: string, cookie?: string) {
   return new NextRequest(url, { headers });
 }
 
-describe('admin middleware', () => {
+describe('admin proxy', () => {
   it('lets /admin/login through unauthenticated', async () => {
-    const res = await middleware(makeReq('/admin/login'));
+    const res = await proxy(makeReq('/admin/login'));
     expect(res.status).toBe(200);
     expect(res.headers.get('location')).toBeNull();
   });
 
   it('redirects /admin to /admin/login when no cookie', async () => {
-    const res = await middleware(makeReq('/admin'));
+    const res = await proxy(makeReq('/admin'));
     expect(res.status).toBe(307);
     expect(res.headers.get('location')).toContain('/admin/login');
   });
 
   it('redirects /admin to /admin/login when token invalid', async () => {
-    const res = await middleware(makeReq('/admin', 'access_token=bad'));
+    const res = await proxy(makeReq('/admin', 'access_token=bad'));
     expect(res.status).toBe(307);
   });
 
   it('passes /admin through with valid token', async () => {
-    const res = await middleware(makeReq('/admin', 'access_token=valid'));
+    const res = await proxy(makeReq('/admin', 'access_token=valid'));
     expect(res.status).toBe(200);
   });
 
   it('does not gate /', async () => {
-    const res = await middleware(makeReq('/'));
+    const res = await proxy(makeReq('/'));
     expect(res.status).toBe(200);
   });
 });
