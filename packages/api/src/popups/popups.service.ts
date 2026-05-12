@@ -1,37 +1,70 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PRISMA } from '../prisma/prisma.module';
 import type { PrismaClient, Popup } from '@news/db';
 import type { CreatePopupInput, UpdatePopupInput, PostPopupOverrideInput } from '@news/shared';
+
+// Prisma 7.x with the pg driver adapter reports the violating column under
+// meta.driverAdapterError.cause.constraint.fields; older Prisma versions used
+// meta.target. Inspect both to stay robust.
+function isCookieKeyConflict(err: unknown): boolean {
+  if (typeof err !== 'object' || err === null) return false;
+  const e = err as {
+    code?: unknown;
+    meta?: {
+      target?: unknown;
+      driverAdapterError?: { cause?: { constraint?: { fields?: unknown } } };
+    };
+  };
+  if (e.code !== 'P2002') return false;
+  const candidates: string[] = [];
+  const target = e.meta?.target;
+  if (Array.isArray(target)) candidates.push(...target.map(String));
+  else if (target != null) candidates.push(String(target));
+  const driverFields = e.meta?.driverAdapterError?.cause?.constraint?.fields;
+  if (Array.isArray(driverFields)) candidates.push(...driverFields.map(String));
+  return candidates.some((f) => f.replace(/"/g, '').toLowerCase() === 'cookiekey');
+}
 
 @Injectable()
 export class PopupsService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
   async create(input: CreatePopupInput): Promise<Popup> {
-    return this.prisma.popup.create({
-      data: {
-        name: input.name,
-        bannerUrl: input.bannerUrl,
-        delayMs: input.delayMs,
-        isGlobal: input.isGlobal ?? false,
-        enabled: input.enabled ?? true,
-        cookieKey: input.cookieKey,
-        cookieTtlMinutes: input.cookieTtlMinutes ?? 1440,
-        forceClickOnClose: input.forceClickOnClose ?? false,
-        hideOnDesktop: input.hideOnDesktop ?? true,
-        hideOnBot: input.hideOnBot ?? true,
-        ignoreCookie: input.ignoreCookie ?? false,
-        links: {
-          create: input.links.map((l) => ({
-            platform: l.platform,
-            device: l.device,
-            url: l.url,
-            label: l.label ?? null,
-          })),
+    try {
+      return await this.prisma.popup.create({
+        data: {
+          name: input.name,
+          bannerUrl: input.bannerUrl,
+          delayMs: input.delayMs,
+          isGlobal: input.isGlobal ?? false,
+          enabled: input.enabled ?? true,
+          cookieKey: input.cookieKey,
+          cookieTtlMinutes: input.cookieTtlMinutes ?? 1440,
+          forceClickOnClose: input.forceClickOnClose ?? false,
+          hideOnDesktop: input.hideOnDesktop ?? true,
+          hideOnBot: input.hideOnBot ?? true,
+          ignoreCookie: input.ignoreCookie ?? false,
+          links: {
+            create: input.links.map((l) => ({
+              platform: l.platform,
+              device: l.device,
+              url: l.url,
+              label: l.label ?? null,
+            })),
+          },
         },
-      },
-      include: { links: true },
-    });
+        include: { links: true },
+      });
+    } catch (err) {
+      if (isCookieKeyConflict(err)) {
+        throw new ConflictException({
+          code: 'COOKIE_KEY_TAKEN',
+          field: 'cookieKey',
+          message: `Cookie key "${input.cookieKey}" đã được dùng cho popup khác. Hãy chọn key khác.`,
+        });
+      }
+      throw err;
+    }
   }
 
   async update(id: string, input: UpdatePopupInput): Promise<Popup> {
@@ -67,11 +100,22 @@ export class PopupsService {
       });
     }
 
-    return this.prisma.popup.update({
-      where: { id },
-      data: data as never,
-      include: { links: true },
-    });
+    try {
+      return await this.prisma.popup.update({
+        where: { id },
+        data: data as never,
+        include: { links: true },
+      });
+    } catch (err) {
+      if (isCookieKeyConflict(err)) {
+        throw new ConflictException({
+          code: 'COOKIE_KEY_TAKEN',
+          field: 'cookieKey',
+          message: `Cookie key "${String(input.cookieKey)}" đã được dùng cho popup khác. Hãy chọn key khác.`,
+        });
+      }
+      throw err;
+    }
   }
 
   async list() {

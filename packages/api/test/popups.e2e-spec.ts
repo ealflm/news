@@ -9,7 +9,7 @@ import { prisma } from '@news/db';
 
 let app: INestApplication;
 let authCookie: string;
-const testEmail = 'e2e-popups@local.test';
+const testUsername = 'e2e_popups';
 const testPassword = 'PopupsTest123!';
 
 beforeAll(async () => {
@@ -17,10 +17,10 @@ beforeAll(async () => {
   await prisma.postPopupOverride.deleteMany({});
   await prisma.popupLink.deleteMany({});
   await prisma.popup.deleteMany({});
-  await prisma.user.deleteMany({ where: { email: testEmail } });
+  await prisma.user.deleteMany({ where: { username: testUsername } });
   await prisma.user.create({
     data: {
-      email: testEmail,
+      username: testUsername,
       displayName: 'PopupsTester',
       passwordHash: await bcrypt.hash(testPassword, 10),
     },
@@ -33,7 +33,7 @@ beforeAll(async () => {
   await app.init();
   const login = await request(app.getHttpServer())
     .post('/api/auth/login')
-    .send({ email: testEmail, password: testPassword });
+    .send({ username: testUsername, password: testPassword });
   const cookies = login.headers['set-cookie'] as unknown as string[];
   authCookie = cookies.find((c) => c.startsWith('access_token='))!;
 });
@@ -43,7 +43,7 @@ afterAll(async () => {
   await prisma.postPopupOverride.deleteMany({});
   await prisma.popupLink.deleteMany({});
   await prisma.popup.deleteMany({});
-  await prisma.user.deleteMany({ where: { email: testEmail } });
+  await prisma.user.deleteMany({ where: { username: testUsername } });
   await app?.close();
   await prisma.$disconnect();
 });
@@ -70,6 +70,47 @@ describe('Popups CRUD + bundle', () => {
     expect(res.body.cookieKey).toBe('popup_3s');
     expect(res.body.links.length).toBe(2);
     popupId = res.body.id;
+  });
+
+  it('returns 409 with field hint on duplicate cookieKey (POST)', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/popups')
+      .set('Cookie', authCookie)
+      .send({
+        name: 'Dup',
+        bannerUrl: 'https://example.com/banner.jpg',
+        delayMs: 3000,
+        cookieKey: 'popup_3s',
+        links: [],
+      });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('COOKIE_KEY_TAKEN');
+    expect(res.body.field).toBe('cookieKey');
+    expect(typeof res.body.message).toBe('string');
+  });
+
+  it('returns 409 when PATCH changes cookieKey to one in use', async () => {
+    const other = await request(app.getHttpServer())
+      .post('/api/popups')
+      .set('Cookie', authCookie)
+      .send({
+        name: 'Other',
+        bannerUrl: 'https://example.com/b.jpg',
+        delayMs: 3000,
+        cookieKey: 'popup_other',
+        links: [],
+      });
+    expect(other.status).toBe(201);
+    const otherId = other.body.id as string;
+
+    const conflict = await request(app.getHttpServer())
+      .patch(`/api/popups/${otherId}`)
+      .set('Cookie', authCookie)
+      .send({ cookieKey: 'popup_3s' });
+    expect(conflict.status).toBe(409);
+    expect(conflict.body.code).toBe('COOKIE_KEY_TAKEN');
+
+    await prisma.popup.delete({ where: { id: otherId } });
   });
 
   it('rejects unauth create', async () => {
@@ -108,7 +149,7 @@ describe('Popups CRUD + bundle', () => {
         contentHtml: '',
         status: 'PUBLISHED',
         publishedAt: new Date(),
-        author: { connect: { email: testEmail } },
+        author: { connect: { username: testUsername } },
       },
     });
 
@@ -130,7 +171,7 @@ describe('Popups CRUD + bundle', () => {
         contentHtml: '',
         status: 'PUBLISHED',
         publishedAt: new Date(),
-        author: { connect: { email: testEmail } },
+        author: { connect: { username: testUsername } },
       },
     });
 
@@ -155,7 +196,7 @@ describe('Popups CRUD + bundle', () => {
         contentHtml: '',
         status: 'PUBLISHED',
         publishedAt: new Date(),
-        author: { connect: { email: testEmail } },
+        author: { connect: { username: testUsername } },
       },
     });
     const bundleRes = await request(app.getHttpServer()).get(`/api/popup-bundle/${post.id}`);

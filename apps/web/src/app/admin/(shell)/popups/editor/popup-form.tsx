@@ -77,7 +77,13 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
   const initialBannerUrl = isRenderableBannerUrl(initial?.bannerUrl) ? initial.bannerUrl : '';
   const [bannerUrl, setBannerUrl] = useState(initialBannerUrl);
   const [delayMs, setDelayMs] = useState(initial?.delayMs ?? 3000);
-  const [cookieKey, setCookieKey] = useState(initial?.cookieKey ?? 'popup_3s');
+  // cookieKey has a UNIQUE constraint at the DB level; give new popups a
+  // distinct default by appending a short timestamp so admins don't collide
+  // with the seed/legacy "popup_3s".
+  const [cookieKey, setCookieKey] = useState(
+    initial?.cookieKey ?? `popup_${Math.floor(Date.now() / 1000).toString(36)}`,
+  );
+  const [cookieKeyError, setCookieKeyError] = useState<string | null>(null);
   const [cookieTtlMinutes, setCookieTtlMinutes] = useState(initial?.cookieTtlMinutes ?? 1440);
   const [isGlobal, setIsGlobal] = useState(initial?.isGlobal ?? false);
   const [enabled, setEnabled] = useState(initial?.enabled ?? true);
@@ -148,6 +154,7 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
 
   async function save() {
     setBusy(true);
+    setCookieKeyError(null);
     const payload = {
       name,
       bannerUrl,
@@ -171,6 +178,19 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
     });
     setBusy(false);
     if (!res.ok) {
+      if (res.status === 409) {
+        const body = (await res.json().catch(() => null)) as {
+          code?: string;
+          field?: string;
+          message?: string;
+        } | null;
+        if (body?.field === 'cookieKey') {
+          const msg = body.message ?? 'Cookie key đã tồn tại';
+          setCookieKeyError(msg);
+          toast.error(msg);
+          return;
+        }
+      }
       toast.error(`Lưu thất bại (${res.status})`);
       return;
     }
@@ -253,10 +273,20 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
               <Input
                 id="p-cookie"
                 value={cookieKey}
-                onChange={(e) => setCookieKey(e.target.value.replace(/[^a-z0-9_]/g, ''))}
+                onChange={(e) => {
+                  setCookieKey(e.target.value.replace(/[^a-z0-9_]/g, ''));
+                  if (cookieKeyError) setCookieKeyError(null);
+                }}
                 placeholder="popup_3s"
                 className="font-mono"
+                aria-invalid={cookieKeyError ? true : undefined}
+                aria-describedby={cookieKeyError ? 'p-cookie-error' : undefined}
               />
+              {cookieKeyError && (
+                <p id="p-cookie-error" className="mt-1 text-[11px] text-destructive">
+                  {cookieKeyError}
+                </p>
+              )}
             </div>
           </div>
 
