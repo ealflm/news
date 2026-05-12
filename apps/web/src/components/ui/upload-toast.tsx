@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast, type Id } from 'react-toastify';
-import { Loader2 } from 'lucide-react';
 import { uploadMedia, type MediaUploadResult } from '@/lib/upload';
 
 type Phase = 'uploading' | 'processing' | 'success' | 'error';
@@ -26,12 +25,7 @@ function PhaseLabel({
   if (phase === 'success') return <>Hoàn tất</>;
   if (phase === 'error') return <>{errorMsg ?? 'Lỗi'}</>;
   if (phase === 'uploading') return <>Đang tải lên… {percent}%</>;
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
-      <ProcessingTimer />
-    </span>
-  );
+  return <ProcessingTimer />;
 }
 
 // Lightweight elapsed-seconds counter so users know the server is alive.
