@@ -88,7 +88,7 @@ export function ImageEditorDialog({ open, imageSrc, onClose, onDone }: Props) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
-  const [aspect, setAspect] = useState<number | undefined>(3 / 4);
+  const [aspect, setAspect] = useState<number | undefined>(1);
   const [pixelCrop, setPixelCrop] = useState<Area | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +98,7 @@ export function ImageEditorDialog({ open, imageSrc, onClose, onDone }: Props) {
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setRotation(0);
-    setAspect(3 / 4);
+    setAspect(1);
     setPixelCrop(null);
     setBusy(false);
     setError(null);
