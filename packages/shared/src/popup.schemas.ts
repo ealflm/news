@@ -33,11 +33,13 @@ export const CreatePopupInputSchema = z.object({
   delayMs: z.number().int().min(0).max(3_600_000),
   isGlobal: z.boolean().optional(),
   enabled: z.boolean().optional(),
+  // Optional on create: omit to let the server auto-generate a unique key.
   cookieKey: z
     .string()
     .min(1)
     .max(64)
-    .regex(/^[a-z0-9_]+$/),
+    .regex(/^[a-z0-9_]+$/)
+    .optional(),
   cookieTtlMinutes: z.number().int().min(1).max(525_600).optional(),
   forceClickOnClose: z.boolean().optional(),
   hideOnDesktop: z.boolean().optional(),

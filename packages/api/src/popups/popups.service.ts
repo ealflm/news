@@ -1,4 +1,5 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
 import { PRISMA } from '../prisma/prisma.module';
 import type { PrismaClient, Popup } from '@news/db';
 import type { CreatePopupInput, UpdatePopupInput, PostPopupOverrideInput } from '@news/shared';
@@ -29,7 +30,18 @@ function isCookieKeyConflict(err: unknown): boolean {
 export class PopupsService {
   constructor(@Inject(PRISMA) private readonly prisma: PrismaClient) {}
 
+  /** Generate a popup_<hex> cookieKey that doesn't currently exist in DB. */
+  async generateUniqueCookieKey(prefix = 'popup'): Promise<string> {
+    for (let i = 0; i < 5; i++) {
+      const candidate = `${prefix}_${randomBytes(4).toString('hex')}`;
+      const existing = await this.prisma.popup.findUnique({ where: { cookieKey: candidate } });
+      if (!existing) return candidate;
+    }
+    return `${prefix}_${Date.now().toString(36)}_${randomBytes(4).toString('hex')}`;
+  }
+
   async create(input: CreatePopupInput): Promise<Popup> {
+    const cookieKey = input.cookieKey ?? (await this.generateUniqueCookieKey());
     try {
       return await this.prisma.popup.create({
         data: {
@@ -38,7 +50,7 @@ export class PopupsService {
           delayMs: input.delayMs,
           isGlobal: input.isGlobal ?? false,
           enabled: input.enabled ?? true,
-          cookieKey: input.cookieKey,
+          cookieKey,
           cookieTtlMinutes: input.cookieTtlMinutes ?? 1440,
           forceClickOnClose: input.forceClickOnClose ?? false,
           hideOnDesktop: input.hideOnDesktop ?? true,
@@ -60,7 +72,7 @@ export class PopupsService {
         throw new ConflictException({
           code: 'COOKIE_KEY_TAKEN',
           field: 'cookieKey',
-          message: `Cookie key "${input.cookieKey}" đã được dùng cho popup khác. Hãy chọn key khác.`,
+          message: `Cookie key "${cookieKey}" đã được dùng cho popup khác. Hãy chọn key khác.`,
         });
       }
       throw err;

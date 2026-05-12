@@ -72,6 +72,35 @@ describe('Popups CRUD + bundle', () => {
     popupId = res.body.id;
   });
 
+  it('GET /cookie-key/suggest returns a fresh unused key', async () => {
+    const a = await request(app.getHttpServer())
+      .get('/api/popups/cookie-key/suggest')
+      .set('Cookie', authCookie);
+    expect(a.status).toBe(200);
+    expect(a.body.cookieKey).toMatch(/^popup_[a-z0-9]+$/);
+
+    const b = await request(app.getHttpServer())
+      .get('/api/popups/cookie-key/suggest')
+      .set('Cookie', authCookie);
+    expect(b.body.cookieKey).not.toBe(a.body.cookieKey);
+  });
+
+  it('creates a popup without cookieKey (server auto-generates)', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/api/popups')
+      .set('Cookie', authCookie)
+      .send({
+        name: 'Auto-key popup',
+        bannerUrl: 'https://example.com/b2.jpg',
+        delayMs: 1000,
+        links: [],
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.cookieKey).toMatch(/^popup_[a-z0-9]+$/);
+    expect(res.body.cookieKey).not.toBe('popup_3s');
+    await prisma.popup.delete({ where: { id: res.body.id } });
+  });
+
   it('returns 409 with field hint on duplicate cookieKey (POST)', async () => {
     const res = await request(app.getHttpServer())
       .post('/api/popups')

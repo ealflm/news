@@ -34,6 +34,13 @@ export class PopupsController {
     return (await this.popups.list()).map(serializePopup);
   }
 
+  // Must be declared above `@Get(':id')` so the literal "cookie-key" path is
+  // not interpreted as a popup id.
+  @Get('cookie-key/suggest')
+  async suggestCookieKey() {
+    return { cookieKey: await this.popups.generateUniqueCookieKey() };
+  }
+
   @Get('overrides/:postId')
   async getOverrides(@Param('postId') postId: string) {
     return this.popups.getOverrides(postId);

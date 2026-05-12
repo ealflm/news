@@ -4,7 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 import { toast } from 'react-toastify';
-import { GripVertical, Info, Link as LinkIcon, Plus, Sparkles, Trash2 } from 'lucide-react';
+import {
+  GripVertical,
+  Info,
+  Link as LinkIcon,
+  Plus,
+  RefreshCw,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 import type { AdminPopup, LinkPlatform, LinkDevice } from '@news/shared';
 import { BannerPicker } from '@/components/ui/banner-picker';
 import { PopupMobilePreview } from './popup-mobile-preview';
@@ -77,13 +85,37 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
   const initialBannerUrl = isRenderableBannerUrl(initial?.bannerUrl) ? initial.bannerUrl : '';
   const [bannerUrl, setBannerUrl] = useState(initialBannerUrl);
   const [delayMs, setDelayMs] = useState(initial?.delayMs ?? 3000);
-  // cookieKey has a UNIQUE constraint at the DB level; give new popups a
-  // distinct default by appending a short timestamp so admins don't collide
-  // with the seed/legacy "popup_3s".
-  const [cookieKey, setCookieKey] = useState(
-    initial?.cookieKey ?? `popup_${Math.floor(Date.now() / 1000).toString(36)}`,
-  );
+  // cookieKey has a UNIQUE DB constraint. For new popups, leave empty in auto
+  // mode and let the server pick on create. For existing popups, show the
+  // saved key; admin can regenerate via the suggest endpoint or edit manually.
+  const [cookieKey, setCookieKey] = useState(initial?.cookieKey ?? '');
+  const [cookieKeyMode, setCookieKeyMode] = useState<'auto' | 'manual'>('auto');
   const [cookieKeyError, setCookieKeyError] = useState<string | null>(null);
+  const [suggestingCookieKey, setSuggestingCookieKey] = useState(false);
+
+  async function suggestCookieKey() {
+    setSuggestingCookieKey(true);
+    setCookieKeyError(null);
+    try {
+      const r = await fetch('/api/popups/cookie-key/suggest');
+      if (!r.ok) throw new Error(String(r.status));
+      const data = (await r.json()) as { cookieKey: string };
+      setCookieKey(data.cookieKey);
+    } catch {
+      toast.error('Không tạo được cookie key, vui lòng thử lại.');
+    } finally {
+      setSuggestingCookieKey(false);
+    }
+  }
+
+  // For NEW popups in auto mode, fetch a suggestion on first mount so the
+  // admin can see the value before saving.
+  useEffect(() => {
+    if (!initial && cookieKeyMode === 'auto' && !cookieKey) {
+      void suggestCookieKey();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [cookieTtlMinutes, setCookieTtlMinutes] = useState(initial?.cookieTtlMinutes ?? 1440);
   const [isGlobal, setIsGlobal] = useState(initial?.isGlobal ?? false);
   const [enabled, setEnabled] = useState(initial?.enabled ?? true);
@@ -155,11 +187,10 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
   async function save() {
     setBusy(true);
     setCookieKeyError(null);
-    const payload = {
+    const payload: Record<string, unknown> = {
       name,
       bannerUrl,
       delayMs,
-      cookieKey,
       cookieTtlMinutes,
       isGlobal,
       enabled,
@@ -169,6 +200,9 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
       ignoreCookie,
       links: links.filter((l) => l.url.trim()),
     };
+    // Only send cookieKey if it has a value — for new popups in auto mode
+    // with no suggestion yet, server picks one.
+    if (cookieKey.trim()) payload.cookieKey = cookieKey.trim();
     const url = initial ? `/api/popups/${initial.id}` : '/api/popups';
     const method = initial ? 'PATCH' : 'POST';
     const res = await fetch(url, {
@@ -214,7 +248,8 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
     router.push('/admin/popups' as Route);
   }
 
-  const canSave = name.trim() && bannerUrl.trim() && cookieKey.trim();
+  // In auto mode the server fills cookieKey if missing, so don't gate save on it.
+  const canSave = name.trim() && bannerUrl.trim() && (cookieKeyMode === 'auto' || cookieKey.trim());
 
   return (
     <div className="mx-auto grid w-full max-w-[1120px] grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -267,24 +302,59 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
               />
             </div>
             <div>
-              <LabelWithHelp htmlFor="p-cookie" tooltip={TIPS.cookieKey} required>
-                Cookie key
-              </LabelWithHelp>
-              <Input
-                id="p-cookie"
-                value={cookieKey}
-                onChange={(e) => {
-                  setCookieKey(e.target.value.replace(/[^a-z0-9_]/g, ''));
-                  if (cookieKeyError) setCookieKeyError(null);
-                }}
-                placeholder="popup_3s"
-                className="font-mono"
-                aria-invalid={cookieKeyError ? true : undefined}
-                aria-describedby={cookieKeyError ? 'p-cookie-error' : undefined}
-              />
+              <div className="mb-1 flex items-baseline justify-between gap-2">
+                <LabelWithHelp htmlFor="p-cookie" tooltip={TIPS.cookieKey} required>
+                  Cookie key
+                </LabelWithHelp>
+                <button
+                  type="button"
+                  onClick={() => setCookieKeyMode((m) => (m === 'auto' ? 'manual' : 'auto'))}
+                  className="no-tap-highlight text-[11px] font-medium text-accent hover:underline"
+                >
+                  {cookieKeyMode === 'auto' ? 'Tự đặt thủ công' : 'Tự sinh'}
+                </button>
+              </div>
+              {cookieKeyMode === 'auto' ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2">
+                  <code className="flex-1 truncate font-mono text-sm text-foreground">
+                    {cookieKey || (suggestingCookieKey ? 'Đang tạo…' : '—')}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={suggestCookieKey}
+                    disabled={suggestingCookieKey}
+                    aria-label="Tạo lại cookie key"
+                    title="Tạo lại"
+                    className="no-tap-highlight inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-fg hover:bg-surface hover:text-primary disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`h-3.5 w-3.5 ${suggestingCookieKey ? 'animate-spin' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                </div>
+              ) : (
+                <Input
+                  id="p-cookie"
+                  value={cookieKey}
+                  onChange={(e) => {
+                    setCookieKey(e.target.value.replace(/[^a-z0-9_]/g, ''));
+                    if (cookieKeyError) setCookieKeyError(null);
+                  }}
+                  placeholder="popup_3s"
+                  className="font-mono"
+                  aria-invalid={cookieKeyError ? true : undefined}
+                  aria-describedby={cookieKeyError ? 'p-cookie-error' : undefined}
+                />
+              )}
               {cookieKeyError && (
                 <p id="p-cookie-error" className="mt-1 text-[11px] text-destructive">
                   {cookieKeyError}
+                </p>
+              )}
+              {initial && cookieKey && cookieKey !== initial.cookieKey && (
+                <p className="mt-1 text-[11px] text-muted-fg">
+                  Đổi key sẽ khiến popup hiện lại với user đã thấy.
                 </p>
               )}
             </div>
