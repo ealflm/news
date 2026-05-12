@@ -107,8 +107,9 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Recovery: when bannerUrl transitions from invalid/empty → valid, persist
-  // just that field so the user doesn't have to remember "Lưu thay đổi".
+  // Auto-persist any banner change (upload, re-crop, swap) immediately as a
+  // single-field PATCH so users don't lose the new banner on F5 if they forget
+  // to click "Lưu thay đổi". Skips when the value clears to empty.
   const prevBannerRef = useRef(initialBannerUrl);
   useEffect(() => {
     if (!initial) return;
@@ -116,7 +117,6 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
     if (bannerUrl === prev) return;
     prevBannerRef.current = bannerUrl;
     if (!isRenderableBannerUrl(bannerUrl)) return;
-    if (isRenderableBannerUrl(prev)) return;
     void (async () => {
       try {
         const res = await fetch(`/api/popups/${initial.id}`, {
