@@ -312,6 +312,10 @@ export class AnalyticsService {
   }
 
   async getTopReferrers(from: Date, to: Date, limit = 10) {
+    // GROUP BY 1 groups by the projected expression (host extracted from URL).
+    // Plain `GROUP BY referrer` resolves to the raw "ViewEvent"."referrer"
+    // column under Postgres's ambiguity rule, so multiple raw URLs sharing the
+    // same host would project to duplicate output rows.
     const rows = await this.prisma.$queryRaw<{ referrer: string | null; views: bigint }[]>`
       SELECT
         CASE
@@ -321,7 +325,7 @@ export class AnalyticsService {
         COUNT(*)::bigint AS views
       FROM "ViewEvent"
       WHERE "createdAt" >= ${from} AND "createdAt" < ${to}
-      GROUP BY referrer
+      GROUP BY 1
       ORDER BY views DESC
       LIMIT ${limit}
     `;
