@@ -81,6 +81,44 @@ const EXCERPTS = [
   'Review chân thực sau thời gian sử dụng dài hạn, không quảng cáo.',
 ];
 
+// Stable, free demo media — no upload step required. picsum.photos returns a
+// deterministic 1280x720 image per seed; YouTube IDs picked from globally
+// popular Vietnamese / tech / shopping content.
+const COVER_SEEDS = [
+  'shop',
+  'phone',
+  'tech',
+  'laptop',
+  'gadget',
+  'review',
+  'sale',
+  'travel',
+  'fashion',
+  'beauty',
+  'home',
+  'audio',
+  'gaming',
+  'kitchen',
+  'fitness',
+];
+function coverUrl(slug: string): string {
+  return `https://picsum.photos/seed/${slug}/1280/720`;
+}
+function inlineImageUrl(slug: string, n: number): string {
+  return `https://picsum.photos/seed/${slug}-${n}/960/540`;
+}
+
+const YOUTUBE_IDS = [
+  'dQw4w9WgXcQ',
+  'jNQXAC9IVRw',
+  'kJQP7kiw5Fk',
+  'fJ9rUzIMcZQ',
+  '3JZ_D3ELwOQ',
+  'M7lc1UVf-VE',
+  'L_jWHffIx5E',
+  'OPf0YbXqDm0',
+];
+
 const DEVICES = ['ios', 'android', 'desktop', 'unknown'] as const;
 const REFERRERS = [
   'https://www.google.com/',
@@ -111,18 +149,40 @@ function randomPastDate(maxDaysAgo: number): Date {
   return new Date(now - offsetMs);
 }
 
-function buildContentHtml(title: string, excerpt: string): string {
-  const paragraphs = [
+function buildContentHtml(slug: string, title: string, excerpt: string): string {
+  // Roughly 1/3 of posts get a YouTube embed.
+  const withYouTube = Math.random() < 0.33;
+  const ytId = pick(YOUTUBE_IDS);
+
+  const parts: string[] = [
     `<p>${excerpt}</p>`,
-    `<p>Trong bài viết này, chúng tôi sẽ phân tích kỹ ${title.toLowerCase()}, đồng thời cung cấp các link mua nhanh tới sản phẩm trên 3 sàn lớn nhất Việt Nam: Shopee, TikTok Shop và Lazada.</p>`,
+    `<p><img src="${inlineImageUrl(slug, 1)}" alt="${title}" loading="lazy" /></p>`,
+    `<p>Trong bài viết này, chúng tôi sẽ phân tích kỹ <strong>${title.toLowerCase()}</strong>, đồng thời cung cấp các link mua nhanh tới sản phẩm trên 3 sàn lớn nhất Việt Nam: Shopee, TikTok Shop và Lazada.</p>`,
     `<h2>Vì sao chủ đề này được quan tâm</h2>`,
     `<p>Người tiêu dùng đang ngày càng kỹ tính khi chọn mua online. Theo khảo sát gần đây, hơn 70% người Việt từng mua hàng trên TMĐT trong 6 tháng qua.</p>`,
+  ];
+
+  if (withYouTube) {
+    parts.push(
+      `<h2>Video chi tiết</h2>`,
+      `<div class="video-embed" style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;margin:1rem 0;">` +
+        `<iframe src="https://www.youtube.com/embed/${ytId}" ` +
+        `style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;" ` +
+        `allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ` +
+        `allowfullscreen></iframe>` +
+        `</div>`,
+    );
+  }
+
+  parts.push(
     `<h2>Các điểm cần lưu ý</h2>`,
     `<ul><li>Kiểm tra đánh giá người mua trước đó</li><li>So sánh giá giữa các sàn để tránh mua hớ</li><li>Tận dụng voucher hoàn xu và mã giảm giá</li></ul>`,
+    `<p><img src="${inlineImageUrl(slug, 2)}" alt="Minh họa cho ${title}" loading="lazy" /></p>`,
     `<h2>Kết luận</h2>`,
     `<p>Với những gợi ý ở trên, hy vọng bạn sẽ có lựa chọn tối ưu và tiết kiệm được nhiều nhất.</p>`,
-  ];
-  return paragraphs.join('\n');
+  );
+
+  return parts.join('\n');
 }
 
 function buildContentJson(html: string): unknown {
@@ -149,7 +209,8 @@ async function main() {
     const title = TITLES[(i - 1) % TITLES.length] ?? `Demo post ${i}`;
     const slug = `demo-${i}`;
     const excerpt = pick(EXCERPTS);
-    const contentHtml = buildContentHtml(title, excerpt);
+    const contentHtml = buildContentHtml(slug, title, excerpt);
+    const coverImageUrl = coverUrl(`${slug}-${pick(COVER_SEEDS)}`);
     const publishedAt = randomPastDate(WINDOW_DAYS);
 
     const post = await prisma.post.upsert({
@@ -159,6 +220,7 @@ async function main() {
         excerpt,
         contentHtml,
         contentJson: buildContentJson(contentHtml) as never,
+        coverImageUrl,
         publishedAt,
         status: 'PUBLISHED',
       },
@@ -168,6 +230,7 @@ async function main() {
         excerpt,
         contentHtml,
         contentJson: buildContentJson(contentHtml) as never,
+        coverImageUrl,
         publishedAt,
         status: 'PUBLISHED',
         authorId,
