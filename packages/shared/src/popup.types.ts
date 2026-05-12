@@ -20,6 +20,7 @@ export interface AdminPopup {
   forceClickOnClose: boolean;
   hideOnDesktop: boolean;
   hideOnBot: boolean;
+  ignoreCookie: boolean;
   configVersion: number;
   links: PopupLinkRecord[];
   createdAt: string;

@@ -20,6 +20,7 @@ export class PopupsService {
         forceClickOnClose: input.forceClickOnClose ?? false,
         hideOnDesktop: input.hideOnDesktop ?? true,
         hideOnBot: input.hideOnBot ?? true,
+        ignoreCookie: input.ignoreCookie ?? false,
         links: {
           create: input.links.map((l) => ({
             platform: l.platform,
@@ -51,6 +52,7 @@ export class PopupsService {
     if (input.forceClickOnClose !== undefined) data.forceClickOnClose = input.forceClickOnClose;
     if (input.hideOnDesktop !== undefined) data.hideOnDesktop = input.hideOnDesktop;
     if (input.hideOnBot !== undefined) data.hideOnBot = input.hideOnBot;
+    if (input.ignoreCookie !== undefined) data.ignoreCookie = input.ignoreCookie;
 
     if (input.links) {
       await this.prisma.popupLink.deleteMany({ where: { popupId: id } });

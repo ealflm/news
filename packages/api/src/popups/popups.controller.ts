@@ -86,6 +86,7 @@ function serializePopup(p: {
   forceClickOnClose: boolean;
   hideOnDesktop: boolean;
   hideOnBot: boolean;
+  ignoreCookie: boolean;
   configVersion: number;
   links?: { id: string; platform: string; device: string; url: string; label: string | null }[];
   createdAt: Date;
@@ -103,6 +104,7 @@ function serializePopup(p: {
     forceClickOnClose: p.forceClickOnClose,
     hideOnDesktop: p.hideOnDesktop,
     hideOnBot: p.hideOnBot,
+    ignoreCookie: p.ignoreCookie,
     configVersion: p.configVersion,
     links: p.links ?? [],
     createdAt: p.createdAt.toISOString(),

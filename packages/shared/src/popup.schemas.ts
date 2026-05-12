@@ -42,6 +42,7 @@ export const CreatePopupInputSchema = z.object({
   forceClickOnClose: z.boolean().optional(),
   hideOnDesktop: z.boolean().optional(),
   hideOnBot: z.boolean().optional(),
+  ignoreCookie: z.boolean().optional(),
   links: z.array(PopupLinkInputSchema).default([]),
 });
 export type CreatePopupInput = z.infer<typeof CreatePopupInputSchema>;

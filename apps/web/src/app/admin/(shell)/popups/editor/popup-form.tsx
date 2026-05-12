@@ -59,6 +59,8 @@ const TIPS = {
     'Bật → Googlebot / FB crawler không thấy popup.\nTránh Google phạt "intrusive interstitial" + giấu mô hình monetization khỏi competitor.',
   forceClickOnClose:
     'User bấm X tưởng đóng popup → backend track click + redirect ra affiliate.\nCTR tăng đáng kể nhưng UX không thân thiện.',
+  ignoreCookie:
+    'Bật → popup KHÔNG đặt cookie ghi nhớ. Mỗi lần load trang là hiện lại.\nDùng để test/demo, hoặc trên landing page muốn popup luôn xuất hiện.\nKhi bật, các thiết lập "Cookie key" và "Cookie hết hạn sau" không có tác dụng.',
   links:
     'Mỗi link tương ứng 1 cặp (sàn × thiết bị).\nRuntime chọn link đúng theo device user.\nVD: iOS Safari mở deeplink shopeevn://, iOS Facebook phải dùng URL web bình thường.',
 };
@@ -82,6 +84,7 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
   const [forceClickOnClose, setForceClickOnClose] = useState(initial?.forceClickOnClose ?? true);
   const [hideOnDesktop, setHideOnDesktop] = useState(initial?.hideOnDesktop ?? true);
   const [hideOnBot, setHideOnBot] = useState(initial?.hideOnBot ?? true);
+  const [ignoreCookie, setIgnoreCookie] = useState(initial?.ignoreCookie ?? false);
   const [links, setLinks] = useState<LinkRow[]>(
     initial?.links.map((l) => ({
       platform: l.platform,
@@ -156,6 +159,7 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
       forceClickOnClose,
       hideOnDesktop,
       hideOnBot,
+      ignoreCookie,
       links: links.filter((l) => l.url.trim()),
     };
     const url = initial ? `/api/popups/${initial.id}` : '/api/popups';
@@ -256,9 +260,14 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
             </div>
           </div>
 
-          <div>
+          <div className={ignoreCookie ? 'pointer-events-none opacity-50' : undefined}>
             <LabelWithHelp tooltip={TIPS.cookieTtl}>Cookie hết hạn sau</LabelWithHelp>
             <DurationInput value={cookieTtlMinutes} onChange={setCookieTtlMinutes} min={1} />
+            {ignoreCookie && (
+              <p className="mt-1 text-[11px] text-muted-fg">
+                Không có tác dụng khi đã bật &ldquo;Luôn hiện mỗi lần load&rdquo;.
+              </p>
+            )}
           </div>
         </Card>
 
@@ -380,6 +389,12 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
             onChange={setForceClickOnClose}
             label="Click X = click affiliate"
             tooltip={TIPS.forceClickOnClose}
+          />
+          <CheckboxRow
+            checked={ignoreCookie}
+            onChange={setIgnoreCookie}
+            label="Luôn hiện mỗi lần load (bỏ qua cookie)"
+            tooltip={TIPS.ignoreCookie}
           />
         </Card>
 

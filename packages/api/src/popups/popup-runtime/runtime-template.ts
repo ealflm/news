@@ -12,7 +12,7 @@ function pickLink(links){var ios=isIOS(),fb=isFbApp(),and=isAndroid();if(ios&&fb
 function show(p){
   if(p.flags.hideOnBot&&isBot())return;
   if(p.flags.hideOnDesktop&&isDesktopGl())return;
-  if(getCookie(p.cookieKey))return;
+  if(!p.flags.ignoreCookie&&getCookie(p.cookieKey))return;
   if(!isIOS()&&!isAndroid())return;
   var overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);display:flex;justify-content:center;align-items:center;z-index:9999';
@@ -35,7 +35,7 @@ function show(p){
     if(clicked)return;clicked=true;
     overlay.parentNode&&overlay.parentNode.removeChild(overlay);
     document.body.style.overflow='';
-    setCookie(p.cookieKey,'1',p.cookieTtlMinutes);
+    if(!p.flags.ignoreCookie)setCookie(p.cookieKey,'1',p.cookieTtlMinutes);
     try{navigator.sendBeacon&&navigator.sendBeacon(__cfg.clickEndpoint+'/'+p.token+'?t='+encodeURIComponent(trigger));}catch(e){}
     var link=pickLink(p.links);
     if(link){window.open(link,'_blank','noopener');}
@@ -45,7 +45,7 @@ function show(p){
     else{
       overlay.parentNode&&overlay.parentNode.removeChild(overlay);
       document.body.style.overflow='';
-      setCookie(p.cookieKey,'1',p.cookieTtlMinutes);
+      if(!p.flags.ignoreCookie)setCookie(p.cookieKey,'1',p.cookieTtlMinutes);
     }
   }
   btn.onclick=function(){close('close');};

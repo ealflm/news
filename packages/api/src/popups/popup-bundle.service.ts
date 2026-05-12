@@ -14,6 +14,7 @@ interface RuntimePopupConfig {
     hideOnDesktop: boolean;
     hideOnBot: boolean;
     forceClickOnClose: boolean;
+    ignoreCookie: boolean;
   };
   links: Partial<Record<'IOS_FB' | 'IOS_SAFARI' | 'ANDROID' | 'DESKTOP_FALLBACK', string>>;
   token: string;
@@ -45,6 +46,7 @@ export class PopupBundleService {
           hideOnDesktop: p.hideOnDesktop,
           hideOnBot: p.hideOnBot,
           forceClickOnClose: p.forceClickOnClose,
+          ignoreCookie: p.ignoreCookie,
         },
         links,
         token,
