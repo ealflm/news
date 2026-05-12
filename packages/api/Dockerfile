@@ -30,9 +30,11 @@ RUN pnpm --filter @news/api build
 RUN pnpm --filter @news/api --prod deploy /app
 
 # Copy prisma generated client into the deployed node_modules
-# pnpm deploy doesn't carry the .prisma/client generated artifacts, so we sync them manually
-RUN src=$(find /repo/node_modules/.pnpm -maxdepth 2 -type d -name "@prisma+client*" | head -1) && \
-    dst=$(find /app/node_modules/.pnpm  -maxdepth 2 -type d -name "@prisma+client*" | head -1) && \
+# pnpm deploy doesn't carry the .prisma/client generated artifacts, so we sync
+# them manually. Match @prisma+client@<version> (NOT client-runtime-utils which
+# starts the same way but has no .prisma folder).
+RUN src=$(find /repo/node_modules/.pnpm -maxdepth 2 -type d -name "@prisma+client@*" | head -1) && \
+    dst=$(find /app/node_modules/.pnpm  -maxdepth 2 -type d -name "@prisma+client@*" | head -1) && \
     if [ -n "$src" ] && [ -n "$dst" ]; then \
       cp -r "$src/node_modules/.prisma" "$dst/node_modules/.prisma"; \
     fi
