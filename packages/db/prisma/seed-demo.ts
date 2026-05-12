@@ -476,27 +476,57 @@ async function main() {
     process.stdout.write(`  [${i}/${POSTS_COUNT}] ${slug} (+${viewRows.length} views)\n`);
   }
 
-  const popup = await prisma.popup.findFirst({ where: { enabled: true } });
-  if (popup) {
-    const posts = await prisma.post.findMany({
-      where: { status: 'PUBLISHED' },
-      select: { id: true },
-      take: POSTS_COUNT,
+  // Ensure at least one enabled popup exists with links across every
+  // platform × device combination so the Platform-bars and Device-donut
+  // charts have meaningful distribution.
+  let popup = await prisma.popup.findFirst({ where: { enabled: true } });
+  if (!popup) {
+    popup = await prisma.popup.create({
+      data: {
+        name: 'Demo affiliate popup',
+        bannerUrl: 'https://picsum.photos/seed/demo-popup-banner/600/800',
+        delayMs: 3000,
+        isGlobal: true,
+        enabled: true,
+        cookieKey: `popup_demo_${Math.random().toString(36).slice(2, 8)}`,
+        cookieTtlMinutes: 1440,
+        forceClickOnClose: false,
+        hideOnDesktop: true,
+        hideOnBot: true,
+        ignoreCookie: false,
+        links: {
+          create: [
+            { platform: 'SHOPEE', device: 'IOS_SAFARI', url: 'https://shopee.vn/m/sale' },
+            { platform: 'SHOPEE', device: 'IOS_FB', url: 'https://shopee.vn/m/sale' },
+            { platform: 'SHOPEE', device: 'ANDROID', url: 'https://shopee.vn/m/sale' },
+            { platform: 'TIKTOK', device: 'IOS_SAFARI', url: 'https://shop.tiktok.com/' },
+            { platform: 'TIKTOK', device: 'ANDROID', url: 'https://shop.tiktok.com/' },
+            { platform: 'LAZADA', device: 'IOS_SAFARI', url: 'https://www.lazada.vn/' },
+            { platform: 'LAZADA', device: 'ANDROID', url: 'https://www.lazada.vn/' },
+            { platform: 'OTHER', device: 'DESKTOP_FALLBACK', url: 'https://example.com/' },
+          ],
+        },
+      },
     });
-    const totalClicks = jitter(POSTS_COUNT * 8, 0.5);
-    const clickRows = Array.from({ length: totalClicks }, () => ({
-      popupId: popup.id,
-      postId: pick(posts).id,
-      device: pick(DEVICES),
-      trigger: Math.random() < 0.7 ? 'image' : 'close',
-      sessionId: `s_${Math.random().toString(36).slice(2, 10)}`,
-      createdAt: randomPastDate(WINDOW_DAYS),
-    }));
-    await prisma.clickEvent.createMany({ data: clickRows });
-    console.log(`  +${clickRows.length} click events for popup "${popup.name}"`);
-  } else {
-    console.log('  No enabled popup found — skipping click events.');
+    console.log(`  Created demo popup "${popup.name}" (cookieKey=${popup.cookieKey})`);
   }
+
+  const posts = await prisma.post.findMany({
+    where: { status: 'PUBLISHED' },
+    select: { id: true },
+    take: POSTS_COUNT,
+  });
+  const totalClicks = jitter(POSTS_COUNT * 8, 0.5);
+  const clickRows = Array.from({ length: totalClicks }, () => ({
+    popupId: popup!.id,
+    postId: pick(posts).id,
+    device: pick(DEVICES),
+    trigger: Math.random() < 0.7 ? 'image' : 'close',
+    sessionId: `s_${Math.random().toString(36).slice(2, 10)}`,
+    createdAt: randomPastDate(WINDOW_DAYS),
+  }));
+  await prisma.clickEvent.createMany({ data: clickRows });
+  console.log(`  +${clickRows.length} click events for popup "${popup.name}"`);
 
   console.log('Done.');
 }
