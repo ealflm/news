@@ -71,6 +71,10 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        # Inlined into the client JS bundle at build time; controls how the
+        # browser builds absolute URLs for media assets returned by the API.
+        NEXT_PUBLIC_API_URL: ${PUBLIC_BASE_URL}
     restart: unless-stopped
     depends_on:
       - api

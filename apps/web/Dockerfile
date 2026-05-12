@@ -4,6 +4,13 @@
 FROM node:20-bookworm-slim AS builder
 WORKDIR /repo
 
+# NEXT_PUBLIC_* env vars are inlined into the client bundle at `next build`
+# time. They must be passed as Docker build args (docker-compose `build.args`),
+# not via runtime `environment:`. Default to empty so the bundle uses
+# same-origin relative URLs when the build arg is absent.
+ARG NEXT_PUBLIC_API_URL=""
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 ENV PNPM_VERSION=9.12.0 COREPACK_ENABLE_DOWNLOAD_PROMPT=0 HUSKY=0
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
