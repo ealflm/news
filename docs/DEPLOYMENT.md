@@ -94,10 +94,14 @@ docker compose up -d postgres redis
 docker compose --profile migrate up migrate
 docker compose ps migrate    # State must be "exited (0)"
 
-# Seed the admin user
+# Seed the admin user.
+# `set -a; source .env; set +a` exports every var in .env into the shell so the
+# `-e VAR` pass-throughs below resolve. DATABASE_URL is NOT passed here —
+# docker-compose already injects it into the migrate service from .env via
+# the `environment:` block in docker-compose.yml.
+set -a; source .env; set +a
 docker compose run --rm \
   -e SEED_ADMIN_USERNAME -e SEED_ADMIN_PASSWORD -e SEED_ADMIN_NAME \
-  -e DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public \
   migrate node_modules/.bin/tsx prisma/seed.ts
 
 # Start full stack
