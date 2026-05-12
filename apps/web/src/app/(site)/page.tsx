@@ -3,7 +3,10 @@ import type { Route } from 'next';
 import { Calendar, ArrowRight } from 'lucide-react';
 import { listPublishedPosts } from '@/lib/posts';
 
-export const revalidate = 60;
+// Skip build-time prerender (API isn't reachable inside the build container).
+// The fetch() inside listPublishedPosts still uses next.revalidate=60, so
+// request-time renders are cheap.
+export const dynamic = 'force-dynamic';
 
 function postUrl(p: { publishedAt: string | null; slug: string }): Route {
   if (!p.publishedAt) return '/' as Route;
