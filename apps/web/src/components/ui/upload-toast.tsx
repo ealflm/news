@@ -84,7 +84,11 @@ function UploadToastBody({ filename, phase, percent, errorMsg }: UploadToastBody
  */
 export async function uploadMediaWithToast(
   file: File,
-  opts: { onPercent?: (p: number) => void } = {},
+  opts: {
+    onPercent?: (p: number) => void;
+    /** Dismiss the toast silently on success (caller will show its own confirmation). */
+    silentSuccess?: boolean;
+  } = {},
 ): Promise<MediaUploadResult> {
   const filename = file.name || 'file';
   const id: Id = toast(<UploadToastBody filename={filename} phase="uploading" percent={0} />, {
@@ -111,15 +115,19 @@ export async function uploadMediaWithToast(
   });
 
   if (result.ok) {
-    toast.update(id, {
-      render: <UploadToastBody filename={filename} phase="success" percent={100} />,
-      type: 'success',
-      isLoading: false,
-      autoClose: 1800,
-      closeOnClick: true,
-      hideProgressBar: false,
-      closeButton: true,
-    });
+    if (opts.silentSuccess) {
+      toast.dismiss(id);
+    } else {
+      toast.update(id, {
+        render: <UploadToastBody filename={filename} phase="success" percent={100} />,
+        type: 'success',
+        isLoading: false,
+        autoClose: 1800,
+        closeOnClick: true,
+        hideProgressBar: false,
+        closeButton: true,
+      });
+    }
   } else {
     const errorMsg =
       result.error === 'network_error'

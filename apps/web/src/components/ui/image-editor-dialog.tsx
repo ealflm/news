@@ -125,7 +125,10 @@ export function ImageEditorDialog({ open, imageSrc, onClose, onDone }: Props) {
     try {
       const blob = await renderCropped(imageSrc, pixelCrop, rotation);
       const file = new File([blob], `banner-${Date.now()}.jpg`, { type: 'image/jpeg' });
-      const res = await uploadMediaWithToast(file);
+      // silentSuccess: the popup form auto-PATCHes the new banner and shows
+      // its own "Đã cập nhật banner" toast, so the upload's own success state
+      // would just duplicate that.
+      const res = await uploadMediaWithToast(file, { silentSuccess: true });
       if (res.ok && res.media) {
         const v = res.media.variants as Record<string, string> | null;
         const path = v?.['1280w'] ?? v?.['720w'] ?? v?.['320w'] ?? res.media.originalPath ?? null;
