@@ -176,7 +176,7 @@ export function ImageEditorDialog({ open, imageSrc, onClose, onDone }: Props) {
           </button>
         </header>
 
-        <div className="relative h-[480px] flex-1 bg-ink/95">
+        <div className="relative h-[60vh] min-h-[360px] w-full shrink-0 bg-ink/95">
           {imageSrc ? (
             <Cropper
               image={imageSrc}

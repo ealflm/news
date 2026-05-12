@@ -17,9 +17,19 @@ export const PopupLinkInputSchema = z.object({
 });
 export type PopupLinkInput = z.infer<typeof PopupLinkInputSchema>;
 
+// Banner must be a real URL (http(s) absolute or /-rooted path) — bare strings
+// would resolve relative in the browser and 404 against the current route.
+const BannerUrlSchema = z
+  .string()
+  .min(1)
+  .max(2000)
+  .refine((s) => /^https?:\/\//i.test(s) || s.startsWith('/'), {
+    message: 'bannerUrl must be an absolute URL or start with /',
+  });
+
 export const CreatePopupInputSchema = z.object({
   name: z.string().min(1).max(200),
-  bannerUrl: z.string().min(1).max(2000),
+  bannerUrl: BannerUrlSchema,
   delayMs: z.number().int().min(0).max(3_600_000),
   isGlobal: z.boolean().optional(),
   enabled: z.boolean().optional(),

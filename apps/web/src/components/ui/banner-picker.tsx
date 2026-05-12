@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { ImageIcon, Pencil, Upload, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ImageIcon, ImageOff, Pencil, Upload, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { ImageEditorDialog } from '@/components/ui/image-editor-dialog';
 
@@ -21,7 +21,10 @@ interface Props {
 export function BannerPicker({ value, onChange }: Props) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingSrc, setEditingSrc] = useState<string>('');
+  const [loadError, setLoadError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => setLoadError(false), [value]);
 
   function openPicker() {
     fileInputRef.current?.click();
@@ -72,8 +75,40 @@ export function BannerPicker({ value, onChange }: Props) {
       {value ? (
         <div className="space-y-2">
           <div className="relative overflow-hidden rounded-md border border-border bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={value} alt="banner" className="w-full max-h-80 object-contain" />
+            {loadError ? (
+              <div className="flex w-full flex-col items-center justify-center gap-2 px-4 py-8 text-center">
+                <ImageOff className="h-6 w-6 text-destructive" aria-hidden="true" />
+                <p className="text-sm font-medium text-destructive">Không tải được ảnh</p>
+                <p
+                  className="max-w-full break-all rounded bg-muted px-2 py-1 font-mono text-[11px] text-muted-fg"
+                  title={value}
+                >
+                  {value}
+                </p>
+                <p className="text-[11px] text-muted-fg">
+                  URL banner không hợp lệ hoặc file không còn tồn tại.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange('');
+                    openPicker();
+                  }}
+                  className="mt-1 inline-flex h-8 items-center gap-1.5 rounded-md border border-primary bg-primary px-3 text-xs font-medium text-on-primary hover:bg-primary/90 no-tap-highlight"
+                >
+                  <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+                  Xóa & upload ảnh mới
+                </button>
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={value}
+                alt="banner"
+                className="w-full max-h-80 object-contain"
+                onError={() => setLoadError(true)}
+              />
+            )}
             <button
               type="button"
               onClick={() => onChange('')}

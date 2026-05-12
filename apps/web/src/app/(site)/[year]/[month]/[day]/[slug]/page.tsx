@@ -9,12 +9,19 @@ import { ViewTracker } from '@/components/site/view-tracker';
 
 export const revalidate = 300;
 
+// [year]/[month]/[day]/[slug] otherwise matches any 4-segment path (e.g.
+// /admin/popups/{id}/something), so reject non-date-shaped segments first.
+function isDateShape(year: string, month: string, day: string): boolean {
+  return /^\d{4}$/.test(year) && /^\d{2}$/.test(month) && /^\d{2}$/.test(day);
+}
+
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ year: string; month: string; day: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { year, month, day, slug } = await params;
+  if (!isDateShape(year, month, day)) return { title: 'Không tìm thấy' };
   const post = await getPublishedPostBySlug(slug);
   if (!post) return { title: 'Không tìm thấy' };
 
@@ -42,6 +49,7 @@ export default async function PostPage({
   params: Promise<{ year: string; month: string; day: string; slug: string }>;
 }) {
   const { year, month, day, slug } = await params;
+  if (!isDateShape(year, month, day)) notFound();
   const post = await getPublishedPostBySlug(slug);
   if (!post) notFound();
 

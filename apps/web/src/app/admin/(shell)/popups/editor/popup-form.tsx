@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Route } from 'next';
 import { toast } from 'react-toastify';
@@ -63,10 +63,17 @@ const TIPS = {
     'Mỗi link tương ứng 1 cặp (sàn × thiết bị).\nRuntime chọn link đúng theo device user.\nVD: iOS Safari mở deeplink shopeevn://, iOS Facebook phải dùng URL web bình thường.',
 };
 
+// Any value not http(s) or /-rooted would resolve as a relative URL and 404
+// against the current admin route — treat such values as empty.
+function isRenderableBannerUrl(s: string | undefined | null): s is string {
+  return !!s && (/^https?:\/\//i.test(s) || s.startsWith('/'));
+}
+
 export function PopupForm({ initial }: { initial?: AdminPopup }) {
   const router = useRouter();
   const [name, setName] = useState(initial?.name ?? '');
-  const [bannerUrl, setBannerUrl] = useState(initial?.bannerUrl ?? '');
+  const initialBannerUrl = isRenderableBannerUrl(initial?.bannerUrl) ? initial.bannerUrl : '';
+  const [bannerUrl, setBannerUrl] = useState(initialBannerUrl);
   const [delayMs, setDelayMs] = useState(initial?.delayMs ?? 3000);
   const [cookieKey, setCookieKey] = useState(initial?.cookieKey ?? 'popup_3s');
   const [cookieTtlMinutes, setCookieTtlMinutes] = useState(initial?.cookieTtlMinutes ?? 1440);
@@ -85,6 +92,46 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
   );
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // Warn once if the loaded record had a bogus bannerUrl that we silently cleared.
+  useEffect(() => {
+    if (initial?.bannerUrl && !isRenderableBannerUrl(initial.bannerUrl)) {
+      toast.warn(
+        'URL banner cũ không hợp lệ — đã xóa. Upload ảnh mới rồi bấm "Lưu thay đổi" để cập nhật.',
+        { autoClose: 6000 },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Recovery: when bannerUrl transitions from invalid/empty → valid, persist
+  // just that field so the user doesn't have to remember "Lưu thay đổi".
+  const prevBannerRef = useRef(initialBannerUrl);
+  useEffect(() => {
+    if (!initial) return;
+    const prev = prevBannerRef.current;
+    if (bannerUrl === prev) return;
+    prevBannerRef.current = bannerUrl;
+    if (!isRenderableBannerUrl(bannerUrl)) return;
+    if (isRenderableBannerUrl(prev)) return;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/popups/${initial.id}`, {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ bannerUrl }),
+        });
+        if (res.ok) {
+          toast.success('Đã cập nhật banner');
+          router.refresh();
+        } else {
+          toast.error(`Cập nhật banner thất bại (${res.status})`);
+        }
+      } catch {
+        toast.error('Mất kết nối khi cập nhật banner');
+      }
+    })();
+  }, [bannerUrl, initial, router]);
 
   function addLink() {
     setLinks([...links, { platform: 'SHOPEE', device: 'IOS_SAFARI', url: '' }]);

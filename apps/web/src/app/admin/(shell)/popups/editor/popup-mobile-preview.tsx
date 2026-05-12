@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ImageIcon, Lock, Wifi, BatteryFull, Signal } from 'lucide-react';
+import { ImageIcon, ImageOff, Lock, Wifi, BatteryFull, Signal, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 /**
  * Phone mockup that previews how the popup will appear on a real mobile device.
  * Replicates the runtime template visuals: 85% black scrim, centered banner
- * with 300px max width, blue circular X button top-right.
+ * with 300px max width, translucent-glass circular X button top-right.
  */
 export function PopupMobilePreview({ bannerUrl, delayMs, forceClickOnClose }: Props) {
   const now = new Date();
@@ -27,6 +27,9 @@ export function PopupMobilePreview({ bannerUrl, delayMs, forceClickOnClose }: Pr
       setHostname(window.location.hostname);
     }
   }, []);
+
+  const [bannerLoadError, setBannerLoadError] = useState(false);
+  useEffect(() => setBannerLoadError(false), [bannerUrl]);
 
   return (
     <div className="flex flex-col items-center gap-3">
@@ -69,24 +72,33 @@ export function PopupMobilePreview({ bannerUrl, delayMs, forceClickOnClose }: Pr
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/85">
             {bannerUrl ? (
               <div className="relative w-[78%]">
-                {/* X button */}
                 <button
                   type="button"
                   className={cn(
-                    'absolute right-[2px] top-[2px] z-10 inline-flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#1e90ff] text-base font-bold text-white shadow',
-                    forceClickOnClose && 'ring-2 ring-destructive/60',
+                    'absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white shadow-md ring-1 ring-white/15 backdrop-blur-md transition-colors',
+                    forceClickOnClose && 'ring-2 ring-destructive/70',
                   )}
                   aria-label="Đóng"
                   tabIndex={-1}
                 >
-                  X
+                  <X className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden="true" />
                 </button>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={bannerUrl}
-                  alt="Banner preview"
-                  className="block w-full rounded-[10px] object-cover"
-                />
+                {bannerLoadError ? (
+                  <div className="flex w-full flex-col items-center justify-center gap-1.5 rounded-[10px] border-2 border-dashed border-destructive/50 bg-black/40 px-3 py-8 text-center">
+                    <ImageOff className="h-5 w-5 text-destructive/90" aria-hidden="true" />
+                    <span className="text-[11px] font-medium text-destructive/90">
+                      Không tải được ảnh
+                    </span>
+                  </div>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={bannerUrl}
+                    alt="Banner preview"
+                    className="block w-full rounded-[10px] object-cover"
+                    onError={() => setBannerLoadError(true)}
+                  />
+                )}
               </div>
             ) : (
               <div className="flex w-[78%] flex-col items-center gap-2 rounded-[10px] border-2 border-dashed border-white/40 bg-black/40 px-4 py-10 text-center text-[11px] text-white/70">
