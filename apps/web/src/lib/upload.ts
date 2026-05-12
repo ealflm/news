@@ -15,13 +15,13 @@ export interface UploadOptions {
 }
 
 /**
- * Upload a file to /api/media via XHR (fetch lacks upload-progress events).
+ * Upload a file to /api/media/upload via XHR (fetch lacks upload-progress events).
  * Emits 0-100% via opts.onProgress. Returns the parsed response.
  */
 export function uploadMedia(file: File, opts: UploadOptions = {}): Promise<MediaUploadResult> {
   return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/media');
+    xhr.open('POST', '/api/media/upload');
 
     xhr.upload.addEventListener('progress', (e) => {
       if (!e.lengthComputable) return;
