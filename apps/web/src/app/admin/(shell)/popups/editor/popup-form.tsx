@@ -117,7 +117,9 @@ export function PopupForm({ initial }: { initial?: AdminPopup }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [cookieTtlMinutes, setCookieTtlMinutes] = useState(initial?.cookieTtlMinutes ?? 1440);
-  const [isGlobal, setIsGlobal] = useState(initial?.isGlobal ?? false);
+  // New popups default to global so they apply to every published post unless
+  // an editor opts out. Existing popups keep whatever value is in DB.
+  const [isGlobal, setIsGlobal] = useState(initial?.isGlobal ?? true);
   const [enabled, setEnabled] = useState(initial?.enabled ?? true);
   const [forceClickOnClose, setForceClickOnClose] = useState(initial?.forceClickOnClose ?? true);
   const [hideOnDesktop, setHideOnDesktop] = useState(initial?.hideOnDesktop ?? true);
