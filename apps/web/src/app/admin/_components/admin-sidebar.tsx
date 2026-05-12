@@ -28,14 +28,14 @@ const NAV: Array<{ href: Route; label: string; Icon: typeof LayoutDashboard }> =
 export function AdminSidebar() {
   const pathname = usePathname();
   return (
-    <aside className="hidden w-60 shrink-0 border-r border-border bg-surface lg:flex lg:flex-col">
-      <div className="flex h-16 items-center gap-2 border-b border-border px-5">
+    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 self-start border-r border-border bg-surface lg:flex lg:flex-col">
+      <div className="flex h-16 shrink-0 items-center gap-2 border-b border-border px-5">
         <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-on-primary">
           <Newspaper className="h-5 w-5" aria-hidden="true" />
         </div>
         <span className="font-heading text-lg font-bold text-foreground">Admin</span>
       </div>
-      <nav className="flex-1 space-y-1 p-3" aria-label="Admin">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label="Admin">
         {NAV.map(({ href, label, Icon }) => {
           const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
           return (
@@ -54,7 +54,7 @@ export function AdminSidebar() {
           );
         })}
       </nav>
-      <form action="/api/auth/logout" method="post" className="border-t border-border p-3">
+      <form action="/api/auth/logout" method="post" className="shrink-0 border-t border-border p-3">
         <button
           type="submit"
           className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-ink/70 transition-colors hover:bg-muted hover:text-destructive no-tap-highlight cursor-pointer"
