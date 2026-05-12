@@ -1,62 +1,99 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { toast, type Id } from 'react-toastify';
+import { Loader2 } from 'lucide-react';
 import { uploadMedia, type MediaUploadResult } from '@/lib/upload';
+
+type Phase = 'uploading' | 'processing' | 'success' | 'error';
 
 interface UploadToastBodyProps {
   filename: string;
+  phase: Phase;
   percent: number;
-  done?: 'success' | 'error' | null;
-  errorMsg?: string;
+  errorMsg?: string | undefined;
 }
 
-function UploadToastBody({ filename, percent, done, errorMsg }: UploadToastBodyProps) {
-  const label =
-    done === 'success'
-      ? 'Hoàn tất'
-      : done === 'error'
-        ? (errorMsg ?? 'Lỗi')
-        : percent < 100
-          ? 'Đang tải lên…'
-          : 'Đang xử lý…';
+function PhaseLabel({
+  phase,
+  percent,
+  errorMsg,
+}: {
+  phase: Phase;
+  percent: number;
+  errorMsg?: string | undefined;
+}) {
+  if (phase === 'success') return <>Hoàn tất</>;
+  if (phase === 'error') return <>{errorMsg ?? 'Lỗi'}</>;
+  if (phase === 'uploading') return <>Đang tải lên… {percent}%</>;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+      <ProcessingTimer />
+    </span>
+  );
+}
+
+// Lightweight elapsed-seconds counter so users know the server is alive.
+// Resets to 0 each time it mounts (i.e. when phase flips to "processing").
+function ProcessingTimer() {
+  const [secs, setSecs] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setSecs((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return <>Đang xử lý ảnh… {secs}s</>;
+}
+
+function UploadToastBody({ filename, phase, percent, errorMsg }: UploadToastBodyProps) {
+  const indeterminate = phase === 'processing';
+  const error = phase === 'error';
   return (
     <div className="min-w-[240px] text-ink">
       <p className="truncate text-sm font-medium">{filename}</p>
       <div className="mt-1.5 flex items-center gap-2">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-pill bg-muted">
-          <div
-            className={`h-full transition-[width] duration-200 ease-out ${
-              done === 'error' ? 'bg-destructive' : 'bg-primary'
-            }`}
-            style={{ width: `${percent}%` }}
-          />
+        <div className="relative h-1.5 flex-1 overflow-hidden rounded-pill bg-muted">
+          {indeterminate ? (
+            <span
+              aria-hidden="true"
+              className="upload-indeterminate absolute inset-y-0 w-2/5 rounded-pill bg-primary"
+            />
+          ) : (
+            <div
+              className={`h-full transition-[width] duration-200 ease-out ${
+                error ? 'bg-destructive' : 'bg-primary'
+              }`}
+              style={{ width: `${percent}%` }}
+            />
+          )}
         </div>
-        <span className="w-10 shrink-0 text-right text-[11px] font-medium tabular-nums text-muted-fg">
-          {percent}%
-        </span>
+        {!indeterminate && (
+          <span className="w-10 shrink-0 text-right text-[11px] font-medium tabular-nums text-muted-fg">
+            {percent}%
+          </span>
+        )}
       </div>
-      <p
-        className={`mt-0.5 text-[11px] ${done === 'error' ? 'text-destructive' : 'text-muted-fg'}`}
-      >
-        {label}
+      <p className={`mt-0.5 text-[11px] ${error ? 'text-destructive' : 'text-muted-fg'}`}>
+        <PhaseLabel phase={phase} percent={percent} errorMsg={errorMsg} />
       </p>
     </div>
   );
 }
 
 /**
- * Upload a media file with live progress toast.
+ * Upload a media file with a phased progress toast.
  *
- * Shows a toast with a progress bar that updates from 0→100%.
- * When server returns 200, transitions to a brief success toast.
- * On failure transitions to an error toast.
+ * Phase 1 (uploading): determinate bar, percent label.
+ * Phase 2 (processing): indeterminate shimmer + elapsed-seconds counter,
+ *   shown while the server resizes/encodes variants (can take several seconds).
+ * Terminal: success or error toast with auto-dismiss.
  */
 export async function uploadMediaWithToast(
   file: File,
   opts: { onPercent?: (p: number) => void } = {},
 ): Promise<MediaUploadResult> {
   const filename = file.name || 'file';
-  const id: Id = toast(<UploadToastBody filename={filename} percent={0} />, {
+  const id: Id = toast(<UploadToastBody filename={filename} phase="uploading" percent={0} />, {
     isLoading: true,
     autoClose: false,
     closeOnClick: false,
@@ -69,14 +106,19 @@ export async function uploadMediaWithToast(
     onProgress: (percent) => {
       opts.onPercent?.(percent);
       toast.update(id, {
-        render: <UploadToastBody filename={filename} percent={percent} />,
+        render: <UploadToastBody filename={filename} phase="uploading" percent={percent} />,
+      });
+    },
+    onUploaded: () => {
+      toast.update(id, {
+        render: <UploadToastBody filename={filename} phase="processing" percent={100} />,
       });
     },
   });
 
   if (result.ok) {
     toast.update(id, {
-      render: <UploadToastBody filename={filename} percent={100} done="success" />,
+      render: <UploadToastBody filename={filename} phase="success" percent={100} />,
       type: 'success',
       isLoading: false,
       autoClose: 1800,
@@ -93,7 +135,7 @@ export async function uploadMediaWithToast(
           : `Lỗi ${result.status || 'không rõ'}`;
     toast.update(id, {
       render: (
-        <UploadToastBody filename={filename} percent={100} done="error" errorMsg={errorMsg} />
+        <UploadToastBody filename={filename} phase="error" percent={100} errorMsg={errorMsg} />
       ),
       type: 'error',
       isLoading: false,

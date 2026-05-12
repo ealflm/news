@@ -9,6 +9,8 @@ export interface MediaUploadResult {
 
 export interface UploadOptions {
   onProgress?: (percent: number, loaded: number, total: number) => void;
+  /** Fires after the request body is fully sent — server is now processing. */
+  onUploaded?: () => void;
   signal?: AbortSignal;
 }
 
@@ -26,6 +28,8 @@ export function uploadMedia(file: File, opts: UploadOptions = {}): Promise<Media
       const percent = Math.min(100, Math.round((e.loaded / e.total) * 100));
       opts.onProgress?.(percent, e.loaded, e.total);
     });
+
+    xhr.upload.addEventListener('load', () => opts.onUploaded?.());
 
     xhr.addEventListener('load', () => {
       const status = xhr.status;

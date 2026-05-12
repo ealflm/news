@@ -73,6 +73,16 @@
   }
 }
 
+/* Indeterminate slide for upload progress (Phase 2: server processing). */
+@keyframes upload-indeterminate {
+  0%   { left: -40%; }
+  100% { left: 100%; }
+}
+.upload-indeterminate {
+  left: -40%;
+  animation: upload-indeterminate 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* Article prose tuning for post detail */
 .prose-news {
   font-family: var(--font-body);
