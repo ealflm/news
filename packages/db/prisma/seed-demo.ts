@@ -322,18 +322,28 @@ const SAMPLE_VIDEOS = [
 ];
 
 const DEVICES = ['ios', 'android', 'desktop', 'unknown'] as const;
-const REFERRERS = [
-  'https://www.google.com/',
-  'https://www.facebook.com/',
-  'https://m.facebook.com/',
-  'https://www.tiktok.com/',
-  'https://l.facebook.com/l.php?u=...',
-  '',
-  'https://news.google.com/',
-  '',
-  '',
-  'https://tinsoc.click/',
+type Device = (typeof DEVICES)[number];
+
+// Realistic referrer mix for a Vietnamese news site — heavy Facebook + Google,
+// some direct + TikTok inbound. Empty string = direct visit.
+const REFERRERS: ReadonlyArray<{ url: string; weight: number }> = [
+  { url: 'https://www.facebook.com/', weight: 25 },
+  { url: 'https://m.facebook.com/', weight: 20 },
+  { url: 'https://l.facebook.com/l.php?u=...', weight: 10 },
+  { url: 'https://www.google.com/', weight: 18 },
+  { url: 'https://news.google.com/', weight: 4 },
+  { url: 'https://www.tiktok.com/', weight: 8 },
+  { url: 'https://t.co/', weight: 2 },
+  { url: 'https://zalo.me/', weight: 3 },
+  { url: 'https://tinsoc.click/', weight: 4 },
+  { url: '', weight: 30 }, // direct
 ];
+
+// Reused across many events so groupBy(sessionId) reflects "unique sessions".
+const SESSION_POOL: string[] = Array.from(
+  { length: 400 },
+  () => `s_${Math.random().toString(36).slice(2, 10)}`,
+);
 
 function coverUrl(slug: string): string {
   return `https://picsum.photos/seed/${slug}-cover/1280/720`;
@@ -352,10 +362,76 @@ function pick<T>(arr: readonly T[]): T {
   return v as T;
 }
 
+function weighted<T>(
+  items: ReadonlyArray<{ value?: T; url?: string; weight: number }>,
+): T | string {
+  const total = items.reduce((s, x) => s + x.weight, 0);
+  let r = Math.random() * total;
+  for (const item of items) {
+    r -= item.weight;
+    if (r <= 0) return (item.value ?? item.url) as never;
+  }
+  return (items[0]?.value ?? items[0]?.url) as never;
+}
+
+// News-site visitor profile: heavily mobile, with iOS slightly leading.
+function randomDevice(): Device {
+  const r = Math.random();
+  if (r < 0.5) return 'ios';
+  if (r < 0.8) return 'android';
+  if (r < 0.95) return 'desktop';
+  return 'unknown';
+}
+
+// FB in-app browser is common on mobile (esp. iOS via shared links).
+function randomInFbApp(device: Device): boolean {
+  if (device === 'ios') return Math.random() < 0.28;
+  if (device === 'android') return Math.random() < 0.18;
+  return false;
+}
+
+// Pseudo-IP hash — 16 hex chars, like the real ipHash in ViewEvent.
+function randomIpHash(): string {
+  return Math.floor(Math.random() * 0xffffffffffffff)
+    .toString(16)
+    .padStart(16, '0')
+    .slice(0, 16);
+}
+
+// Hourly weights modeling Vietnam reading habits: low overnight, lunch peak
+// (~12h), evening peak (~20-22h), tapering after midnight.
+const HOUR_WEIGHTS = [
+  // 0-5
+  1, 1, 0.5, 0.5, 0.5, 1,
+  // 6-11
+  2, 4, 6, 7, 7, 8,
+  // 12-17
+  9, 9, 7, 6, 6, 7,
+  // 18-23
+  10, 12, 14, 13, 9, 4,
+];
+
+function realisticPastDate(maxDaysAgo: number): Date {
+  const dayOffset = Math.random() * maxDaysAgo;
+  const d = new Date(Date.now() - dayOffset * 86_400_000);
+  const total = HOUR_WEIGHTS.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  let hour = 0;
+  for (let i = 0; i < 24; i++) {
+    r -= HOUR_WEIGHTS[i]!;
+    if (r <= 0) {
+      hour = i;
+      break;
+    }
+  }
+  d.setHours(hour, Math.floor(Math.random() * 60), Math.floor(Math.random() * 60), 0);
+  return d;
+}
+
+// Backwards-compat alias kept so existing call site for publishedAt picks any
+// time-of-day uniformly (article posting time isn't traffic-shaped).
 function randomPastDate(maxDaysAgo: number): Date {
-  const now = Date.now();
-  const offsetMs = Math.random() * maxDaysAgo * 24 * 60 * 60 * 1000;
-  return new Date(now - offsetMs);
+  return new Date(Date.now() - Math.random() * maxDaysAgo * 86_400_000);
 }
 
 function buildContentHtml(slug: string, article: DemoArticle, ytId: string | null): string {
@@ -457,14 +533,19 @@ async function main() {
     });
 
     const viewsToCreate = jitter(VIEWS_PER_POST, 0.5);
-    const viewRows = Array.from({ length: viewsToCreate }, () => ({
-      postId: post.id,
-      sessionId: `s_${Math.random().toString(36).slice(2, 10)}`,
-      device: pick(DEVICES),
-      inFbApp: Math.random() < 0.15,
-      referrer: pick(REFERRERS) || null,
-      createdAt: randomPastDate(WINDOW_DAYS),
-    }));
+    const viewRows = Array.from({ length: viewsToCreate }, () => {
+      const device = randomDevice();
+      const referrer = weighted(REFERRERS) as string;
+      return {
+        postId: post.id,
+        sessionId: pick(SESSION_POOL),
+        ipHash: randomIpHash(),
+        device,
+        inFbApp: randomInFbApp(device),
+        referrer: referrer || null,
+        createdAt: realisticPastDate(WINDOW_DAYS),
+      };
+    });
 
     if (viewRows.length > 0) {
       await prisma.viewEvent.createMany({ data: viewRows });
@@ -517,14 +598,18 @@ async function main() {
     take: POSTS_COUNT,
   });
   const totalClicks = jitter(POSTS_COUNT * 8, 0.5);
-  const clickRows = Array.from({ length: totalClicks }, () => ({
-    popupId: popup!.id,
-    postId: pick(posts).id,
-    device: pick(DEVICES),
-    trigger: Math.random() < 0.7 ? 'image' : 'close',
-    sessionId: `s_${Math.random().toString(36).slice(2, 10)}`,
-    createdAt: randomPastDate(WINDOW_DAYS),
-  }));
+  const clickRows = Array.from({ length: totalClicks }, () => {
+    // Clicks skew slightly more mobile than views (popups are mobile-targeted).
+    const device = Math.random() < 0.95 ? randomDevice() : 'unknown';
+    return {
+      popupId: popup!.id,
+      postId: pick(posts).id,
+      device,
+      trigger: Math.random() < 0.7 ? 'image' : 'close',
+      sessionId: pick(SESSION_POOL),
+      createdAt: realisticPastDate(WINDOW_DAYS),
+    };
+  });
   await prisma.clickEvent.createMany({ data: clickRows });
   console.log(`  +${clickRows.length} click events for popup "${popup.name}"`);
 
