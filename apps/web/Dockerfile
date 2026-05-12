@@ -30,12 +30,12 @@ RUN pnpm --filter @news/web build
 # --- Runner ---
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
-ENV NODE_ENV=production PORT=3000
+ENV NODE_ENV=production PORT=6000
 
 # Next.js standalone output bundles all required deps
 COPY --from=builder /repo/apps/web/.next/standalone ./
 COPY --from=builder /repo/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /repo/apps/web/public ./apps/web/public
 
-EXPOSE 3000
+EXPOSE 6000
 CMD ["node", "apps/web/server.js"]

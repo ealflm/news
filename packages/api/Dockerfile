@@ -50,7 +50,7 @@ CMD ["node_modules/.bin/prisma", "migrate", "deploy"]
 # --- Runner ---
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
-ENV NODE_ENV=production PORT=4000
+ENV NODE_ENV=production PORT=6001
 
 # System deps for sharp + libvips runtime
 RUN apt-get update && apt-get install -y --no-install-recommends libvips42 \
@@ -62,5 +62,5 @@ COPY --from=builder /repo/packages/db/dist /app/node_modules/@news/db/dist
 COPY --from=builder /repo/packages/db/prisma /app/node_modules/@news/db/prisma
 COPY --from=builder /repo/packages/shared/dist /app/node_modules/@news/shared/dist
 
-EXPOSE 4000
+EXPOSE 6001
 CMD ["node", "dist/main.js"]
