@@ -7,6 +7,7 @@ import { getPublishedPostBySlug } from '@/lib/posts';
 import { getPopupBundleBase64 } from '@/lib/popups';
 import { ViewTracker } from '@/components/site/view-tracker';
 import { CopyUrlButton } from '@/components/ui/copy-url-button';
+import { SensitiveMediaHydrator } from './sensitive-media-hydrator';
 
 export const revalidate = 300;
 
@@ -135,6 +136,7 @@ export default async function PostPage({
         )}
 
         <div className="prose-news" dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
+        <SensitiveMediaHydrator />
       </article>
 
       {popupBase64 && <script async src={`data:text/javascript;base64,${popupBase64}`} />}

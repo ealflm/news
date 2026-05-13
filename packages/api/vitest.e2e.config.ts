@@ -8,7 +8,7 @@ config({ path: resolve(__dirname, '../../.env') });
 export default defineConfig({
   plugins: [swc.vite()],
   test: {
-    include: ['test/**/*.e2e-spec.ts'],
+    include: ['test/**/*.e2e-spec.ts', 'src/**/*.spec.ts'],
     testTimeout: 20000,
     hookTimeout: 20000,
     environment: 'node',

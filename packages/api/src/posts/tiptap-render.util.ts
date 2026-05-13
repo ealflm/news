@@ -41,6 +41,17 @@ const FontSize = Mark.create({
   },
 });
 
+// Shared attr: marks a media node as sensitive. Must mirror the client
+// declaration in apps/web .../tiptap-extensions.ts — drift breaks parse roundtrip.
+const sensitiveAttr = {
+  sensitive: {
+    default: false,
+    parseHTML: (el: HTMLElement) => el.getAttribute('data-sensitive') === 'true',
+    renderHTML: (attrs: { sensitive?: boolean }) =>
+      attrs.sensitive ? { 'data-sensitive': 'true' } : {},
+  },
+};
+
 const Video = Node.create({
   name: 'video',
   group: 'block',
@@ -49,6 +60,7 @@ const Video = Node.create({
     return {
       src: { default: null },
       poster: { default: null },
+      ...sensitiveAttr,
     };
   },
   parseHTML() {
@@ -97,8 +109,16 @@ const EXTENSIONS = [
     openOnClick: false,
     HTMLAttributes: { rel: 'noopener', target: '_blank' },
   }),
-  Youtube.configure({ controls: true, nocookie: true }),
-  Image.configure({ HTMLAttributes: { class: 'max-w-full h-auto rounded my-4' } }),
+  Youtube.extend({
+    addAttributes() {
+      return { ...this.parent?.(), ...sensitiveAttr };
+    },
+  }).configure({ controls: true, nocookie: true }),
+  Image.extend({
+    addAttributes() {
+      return { ...this.parent?.(), ...sensitiveAttr };
+    },
+  }).configure({ HTMLAttributes: { class: 'max-w-full h-auto rounded my-4' } }),
   Underline,
   Highlight.configure({ multicolor: true }),
   Subscript,
@@ -129,8 +149,37 @@ export function renderTiptapToHtml(json: unknown): string {
         }
       },
     );
+    html = wrapSensitiveMedia(html);
     return html;
   } catch {
     return '';
   }
+}
+
+const IMAGE_OVERLAY = 'Hình ảnh nhạy cảm, muốn xem thì nhấn vào?';
+const VIDEO_OVERLAY = 'Video nhạy cảm, muốn xem thì nhấn vào?';
+
+export function wrapSensitiveMedia(html: string): string {
+  let out = html.replace(/<img\b[^>]*\bdata-sensitive="true"[^>]*\/?>/g, (m) =>
+    buildSensitiveWrapper(m, 'image', IMAGE_OVERLAY),
+  );
+  out = out.replace(/<iframe\b[^>]*\bdata-sensitive="true"[^>]*>\s*<\/iframe>/g, (m) =>
+    buildSensitiveWrapper(m, 'video', VIDEO_OVERLAY),
+  );
+  out = out.replace(/<video\b[^>]*\bdata-sensitive="true"[^>]*>[\s\S]*?<\/video>/g, (m) =>
+    buildSensitiveWrapper(m, 'video', VIDEO_OVERLAY),
+  );
+  return out;
+}
+
+function buildSensitiveWrapper(inner: string, kind: 'image' | 'video', text: string): string {
+  const aria = kind === 'image' ? 'Hiện hình ảnh nhạy cảm' : 'Hiện video nhạy cảm';
+  return (
+    `<span class="sensitive-media" data-media="${kind}">` +
+    inner +
+    `<button type="button" class="sensitive-overlay" aria-label="${aria}">` +
+    `<span class="sensitive-overlay__text">${text}</span>` +
+    `</button>` +
+    `</span>`
+  );
 }

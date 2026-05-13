@@ -1,6 +1,7 @@
 'use client';
 
 import { useEditor, EditorContent, type Editor } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import { editorExtensions } from './tiptap-extensions';
 import { ToolbarPopover } from './toolbar-popover';
 import { EmojiPicker } from './emoji-picker';
@@ -49,6 +50,7 @@ import {
   ChevronDown,
   RemoveFormatting,
   FolderOpen,
+  AlertTriangle,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -126,6 +128,46 @@ async function createEmbedFromUrl(url: string): Promise<{ html: string; provider
   const v = data.media.variants as { html?: string; provider?: string } | null;
   if (!v?.html) return null;
   return { html: v.html, provider: v.provider ?? '' };
+}
+
+const SENSITIVE_NODE_NAMES = ['image', 'youtube', 'video'] as const;
+type SensitiveNodeName = (typeof SENSITIVE_NODE_NAMES)[number];
+
+function activeSensitiveNode(editor: Editor): SensitiveNodeName | null {
+  return SENSITIVE_NODE_NAMES.find((n) => editor.isActive(n)) ?? null;
+}
+
+/** Floating menu shown when a media node (image/youtube/video) is selected. */
+function SensitiveBubbleMenu({ editor }: { editor: Editor }) {
+  const nodeName = activeSensitiveNode(editor);
+  const sensitive = nodeName ? Boolean(editor.getAttributes(nodeName).sensitive) : false;
+  return (
+    <BubbleMenu
+      editor={editor}
+      shouldShow={({ editor }) => activeSensitiveNode(editor) !== null}
+      options={{ placement: 'top', offset: 8 }}
+    >
+      <button
+        type="button"
+        onClick={() => {
+          const name = activeSensitiveNode(editor);
+          if (!name) return;
+          const cur = Boolean(editor.getAttributes(name).sensitive);
+          editor.chain().focus().updateAttributes(name, { sensitive: !cur }).run();
+        }}
+        aria-pressed={sensitive}
+        className={cn(
+          'flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium shadow-sm transition-colors',
+          sensitive
+            ? 'border-red-300 bg-red-50 text-red-700 hover:bg-red-100'
+            : 'border-border bg-card text-ink hover:bg-muted',
+        )}
+      >
+        <AlertTriangle className="size-3.5" />
+        {sensitive ? 'Đã đánh dấu nhạy cảm' : 'Đánh dấu nhạy cảm'}
+      </button>
+    </BubbleMenu>
+  );
 }
 
 /** Toolbar button: icon-based, supports active state */
@@ -281,6 +323,7 @@ export function TiptapEditor({ content, onChange }: Props) {
     <div className="rounded-md">
       <Toolbar editor={editor} onOpenLibrary={(k) => setLibraryKind(k)} />
       <EditorContent editor={editor} />
+      {editor ? <SensitiveBubbleMenu editor={editor} /> : null}
       <MediaPicker
         open={libraryKind !== null}
         kind={libraryKind ?? 'IMAGE'}

@@ -149,6 +149,71 @@
   aspect-ratio: 16/9;
 }
 
+/* Sensitive media: server wraps <img>/<iframe>/<video> with `.sensitive-media`.
+   CSS does the blur + overlay; client hydrator adds `.revealed` on click. */
+.prose-news .sensitive-media {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  margin: 1.5rem 0;
+}
+.prose-news .sensitive-media > img,
+.prose-news .sensitive-media > iframe,
+.prose-news .sensitive-media > video {
+  filter: blur(28px);
+  transform: scale(1.05);
+  transition:
+    filter 200ms ease,
+    transform 200ms ease;
+  pointer-events: none;
+  margin: 0;
+}
+.prose-news .sensitive-media.revealed > img,
+.prose-news .sensitive-media.revealed > iframe,
+.prose-news .sensitive-media.revealed > video {
+  filter: none;
+  transform: none;
+  pointer-events: auto;
+}
+.prose-news .sensitive-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  z-index: 1;
+}
+.prose-news .sensitive-overlay__text {
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 80%;
+  text-align: center;
+  line-height: 1.4;
+}
+.prose-news .sensitive-media.revealed .sensitive-overlay {
+  display: none;
+}
+
+/* Editor preview: show a red outline + badge instead of blur so admin sees content */
+.ProseMirror img[data-sensitive='true'],
+.ProseMirror iframe[data-sensitive='true'],
+.ProseMirror video[data-sensitive='true'] {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* Wrappers handle their own sizing/margins — let nested iframes fill the wrapper exactly */
 .prose-news .iframe-wrap,
 .ProseMirror .iframe-wrap,
