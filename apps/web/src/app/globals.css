@@ -162,8 +162,8 @@
 .prose-news .sensitive-media > img,
 .prose-news .sensitive-media > iframe,
 .prose-news .sensitive-media > video {
-  filter: blur(28px);
-  transform: scale(1.05);
+  filter: blur(12px);
+  transform: scale(1.02);
   transition:
     filter 200ms ease,
     transform 200ms ease;
