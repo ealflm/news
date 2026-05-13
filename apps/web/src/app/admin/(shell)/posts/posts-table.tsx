@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { toast } from 'react-toastify';
-import { EyeOff, Globe2, Trash2, X } from 'lucide-react';
+import { Check, Copy, EyeOff, Globe2, Trash2, X } from 'lucide-react';
 import type { PostListItem } from '@news/shared';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -25,11 +25,37 @@ const STATUS_STYLES: Record<string, string> = {
   SCHEDULED: 'bg-accent/10 text-accent border border-accent/30',
 };
 
+function postPath(p: { publishedAt: string | null; slug: string }): string | null {
+  if (!p.publishedAt) return null;
+  const d = new Date(p.publishedAt);
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `/${yyyy}/${mm}/${dd}/${p.slug}`;
+}
+
 export function PostsTable({ items, nextCursor, searchParams }: Props) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [busyAction, setBusyAction] = useState<Action | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  async function copyUrl(p: PostListItem) {
+    const path = postPath(p);
+    if (!path) return;
+    const url = `${window.location.origin}${path}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(p.id);
+      toast.success('Đã sao chép URL');
+      setTimeout(() => {
+        setCopiedId((prev) => (prev === p.id ? null : prev));
+      }, 1800);
+    } catch {
+      toast.error('Không thể sao chép URL');
+    }
+  }
 
   const selectionSummary = useMemo(() => {
     let draft = 0;
@@ -153,18 +179,23 @@ export function PostsTable({ items, nextCursor, searchParams }: Props) {
               <th className="px-4 py-3 font-medium text-ink">Slug</th>
               <th className="px-4 py-3 font-medium text-ink">Trạng thái</th>
               <th className="px-4 py-3 font-medium text-ink">Cập nhật</th>
+              <th className="w-12 px-3 py-3 text-right font-medium text-ink">
+                <span className="sr-only">Sao chép URL</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-fg">
+                <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-fg">
                   Không có bài viết nào khớp với bộ lọc hiện tại.
                 </td>
               </tr>
             ) : (
               items.map((p) => {
                 const checked = selectedIds.has(p.id);
+                const hasUrl = !!postPath(p);
+                const isCopied = copiedId === p.id;
                 return (
                   <tr
                     key={p.id}
@@ -203,6 +234,26 @@ export function PostsTable({ items, nextCursor, searchParams }: Props) {
                     </td>
                     <td className="px-4 py-3 text-muted-fg tabular-nums text-xs">
                       {p.publishedAt ? new Date(p.publishedAt).toLocaleString('vi-VN') : '—'}
+                    </td>
+                    <td className="px-3 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => void copyUrl(p)}
+                        disabled={!hasUrl}
+                        aria-label={
+                          hasUrl
+                            ? `Sao chép URL của "${p.title}"`
+                            : 'Bài chưa xuất bản — không có URL'
+                        }
+                        title={hasUrl ? 'Sao chép URL' : 'Bài chưa xuất bản — không có URL'}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-fg hover:bg-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-fg no-tap-highlight"
+                      >
+                        {isCopied ? (
+                          <Check className="h-4 w-4 text-success" aria-hidden="true" />
+                        ) : (
+                          <Copy className="h-4 w-4" aria-hidden="true" />
+                        )}
+                      </button>
                     </td>
                   </tr>
                 );

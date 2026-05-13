@@ -1,5 +1,6 @@
 import { Calendar, Clock, Eye } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { CopyUrlButton } from '@/components/ui/copy-url-button';
 import type { AdminPost } from '@news/shared';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -25,7 +26,17 @@ function fmt(iso: string | null) {
   });
 }
 
+function postPath(post: AdminPost): string | null {
+  if (!post.publishedAt || !post.slug) return null;
+  const d = new Date(post.publishedAt);
+  const yyyy = d.getUTCFullYear();
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(d.getUTCDate()).padStart(2, '0');
+  return `/${yyyy}/${mm}/${dd}/${post.slug}`;
+}
+
 export function PostStatusCard({ post }: { post: AdminPost }) {
+  const path = postPath(post);
   return (
     <Card className="p-4">
       <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-fg">Trạng thái</p>
@@ -73,6 +84,19 @@ export function PostStatusCard({ post }: { post: AdminPost }) {
           </dd>
         </div>
       </dl>
+      {path && (
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-fg">
+            URL công khai
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-md border border-border bg-muted/40 px-2 py-1.5 font-mono text-xs text-ink">
+              {path}
+            </code>
+            <CopyUrlButton path={path} size="sm" />
+          </div>
+        </div>
+      )}
     </Card>
   );
 }

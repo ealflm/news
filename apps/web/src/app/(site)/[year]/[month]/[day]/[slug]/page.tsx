@@ -6,6 +6,7 @@ import { Calendar, Eye, User } from 'lucide-react';
 import { getPublishedPostBySlug } from '@/lib/posts';
 import { getPopupBundleBase64 } from '@/lib/popups';
 import { ViewTracker } from '@/components/site/view-tracker';
+import { CopyUrlButton } from '@/components/ui/copy-url-button';
 
 export const revalidate = 300;
 
@@ -113,6 +114,13 @@ export default async function PostPage({
               <Eye className="h-4 w-4" aria-hidden="true" />
               {new Intl.NumberFormat('vi-VN').format(post.viewCount)} lượt xem
             </span>
+            <CopyUrlButton
+              path={`/${year}/${month}/${day}/${slug}`}
+              size="sm"
+              showLabel
+              label="Sao chép URL"
+              className="ml-auto"
+            />
           </div>
         </header>
 
