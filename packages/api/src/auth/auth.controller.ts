@@ -75,13 +75,10 @@ export class AuthController {
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const payload = req.user as { sub: string; jti?: string; exp?: number };
     const user = await this.users.findByIdOrThrow(payload.sub);
-    // Revoke old refresh token jti
-    if (payload.jti && payload.exp) {
-      const ttl = payload.exp - Math.floor(Date.now() / 1000);
-      if (ttl > 0) {
-        await this.revocation.revoke(payload.jti, ttl);
-      }
-    }
+    // Don't revoke the old refresh token here: concurrent middleware refreshes
+    // (page navigation + prefetch) would race — the first revokes the jti before
+    // the second's guard runs, kicking the user to /admin/login. Old refresh
+    // tokens stay valid until natural expiry; only /logout revokes explicitly.
     const access = this.auth.signAccessToken(user);
     const refresh = this.auth.signRefreshToken(user);
     res.cookie('access_token', access.token, { ...baseCookie, maxAge: ACCESS_MS });
