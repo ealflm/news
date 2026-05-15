@@ -7,7 +7,10 @@ export async function POST(req: NextRequest) {
     method: 'POST',
     headers: { cookie: req.headers.get('cookie') ?? '' },
   });
-  const res = NextResponse.redirect(new URL('/admin/login', req.url), 303);
+  // Client handles navigation; we only forward Set-Cookie (clears the auth
+  // cookies). Returning 204 avoids relying on browser redirect-follow behaviour
+  // for fetch-initiated POSTs.
+  const res = new NextResponse(null, { status: 204 });
   const setCookies = upstream.headers.getSetCookie?.() ?? [];
   for (const c of setCookies) res.headers.append('set-cookie', c);
   return res;

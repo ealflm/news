@@ -25,6 +25,18 @@ const NAV: Array<{ href: Route; label: string; Icon: typeof LayoutDashboard }> =
   { href: '/admin/audit' as Route, label: 'Audit log', Icon: History },
 ];
 
+async function logout() {
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch {
+    // Upstream slow/unreachable — navigate anyway so the user can recover.
+  }
+  window.location.href = '/admin/login';
+}
+
 export function AdminSidebar() {
   const pathname = usePathname();
   return (
@@ -54,15 +66,16 @@ export function AdminSidebar() {
           );
         })}
       </nav>
-      <form action="/api/auth/logout" method="post" className="shrink-0 border-t border-border p-3">
+      <div className="shrink-0 border-t border-border p-3">
         <button
-          type="submit"
+          type="button"
+          onClick={() => void logout()}
           className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-ink/70 transition-colors hover:bg-muted hover:text-destructive no-tap-highlight cursor-pointer"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
           Đăng xuất
         </button>
-      </form>
+      </div>
     </aside>
   );
 }
