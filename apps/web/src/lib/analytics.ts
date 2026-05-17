@@ -24,19 +24,15 @@ export async function getAnalyticsOverview(daysWindow = 7): Promise<AnalyticsOve
   return res.json();
 }
 
-function isoDay(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
 interface RangeQuery {
   from: Date | string;
   to: Date | string;
 }
 
 function toRangeParams(q: RangeQuery): string {
-  const from = typeof q.from === 'string' ? q.from : isoDay(q.from);
-  const to = typeof q.to === 'string' ? q.to : isoDay(q.to);
-  return `from=${from}&to=${to}`;
+  const from = typeof q.from === 'string' ? q.from : q.from.toISOString();
+  const to = typeof q.to === 'string' ? q.to : q.to.toISOString();
+  return `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 }
 
 export async function getByDevice(q: RangeQuery): Promise<AnalyticsByDevice[]> {
