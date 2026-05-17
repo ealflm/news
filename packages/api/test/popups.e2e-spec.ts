@@ -235,13 +235,13 @@ describe('Popups CRUD + bundle', () => {
     const token = tokenMatch![1];
 
     const beforeCount = await prisma.clickEvent.count();
-    const click = await request(app.getHttpServer()).get(`/api/click/${token}?t=image`);
+    const click = await request(app.getHttpServer()).post(`/api/click/${token}?t=image`);
     expect(click.status).toBe(204);
     await new Promise((r) => setTimeout(r, 200));
     const afterCount = await prisma.clickEvent.count();
     expect(afterCount).toBe(beforeCount + 1);
 
-    const click2 = await request(app.getHttpServer()).get('/api/click/bogus-token?t=close');
+    const click2 = await request(app.getHttpServer()).post('/api/click/bogus-token?t=close');
     expect(click2.status).toBe(204);
 
     await prisma.post.delete({ where: { id: post.id } });

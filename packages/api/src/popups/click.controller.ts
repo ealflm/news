@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, Res } from '@nestjs/common';
+import { Controller, Param, Post, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { PopupsService } from './popups.service';
 import { verify } from './click-token.util';
@@ -8,7 +8,7 @@ import { loadEnv } from '../config/env';
 export class ClickController {
   constructor(private readonly popups: PopupsService) {}
 
-  @Get(':token')
+  @Post(':token')
   async track(
     @Param('token') token: string,
     @Query('t') trigger: string | undefined,
